@@ -13,6 +13,17 @@
       "name": "ender_torment:outline",
       "intarget": "ender_torment:main",
       "outtarget": "b"
+    },
+    {
+      "name": "ender_torment:combine",
+      "intarget": "a",
+      "outtarget": "minecraft:main",
+      "auxtargets": [
+        {
+          "name": "Outlines",
+          "id": "b"
+        }
+      ]
     }
   ]
 }

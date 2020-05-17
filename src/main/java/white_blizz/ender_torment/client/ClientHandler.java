@@ -1,15 +1,26 @@
 package white_blizz.ender_torment.client;
 
+import com.google.common.collect.Streams;
+import com.mojang.blaze3d.platform.GlStateManager;
 import com.mojang.blaze3d.systems.RenderSystem;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.entity.player.ClientPlayerEntity;
 import net.minecraft.client.renderer.BufferBuilder;
+import net.minecraft.client.renderer.Matrix4f;
 import net.minecraft.client.renderer.Tessellator;
 import net.minecraft.client.renderer.WorldVertexBufferUploader;
+import net.minecraft.client.renderer.entity.EntityRenderer;
 import net.minecraft.client.renderer.vertex.DefaultVertexFormats;
 import net.minecraft.client.shader.Framebuffer;
+import net.minecraft.client.shader.Shader;
 import net.minecraft.client.shader.ShaderGroup;
+import net.minecraft.client.world.ClientWorld;
+import net.minecraft.entity.Entity;
+import net.minecraft.entity.passive.SheepEntity;
+import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.util.ResourceLocation;
+import net.minecraft.util.math.MathHelper;
+import net.minecraft.util.math.Vec3d;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.api.distmarker.OnlyIn;
 import net.minecraftforge.client.event.RenderWorldLastEvent;
@@ -19,6 +30,7 @@ import white_blizz.ender_torment.common.potion.ETEffects;
 import white_blizz.ender_torment.utils.Ref;
 
 import java.io.IOException;
+import java.util.stream.Stream;
 
 @OnlyIn(Dist.CLIENT)
 @Mod.EventBusSubscriber(value = Dist.CLIENT, modid = Ref.MOD_ID, bus = Mod.EventBusSubscriber.Bus.FORGE)
@@ -31,12 +43,16 @@ public class ClientHandler {
 
 
 	private static ShaderGroup shaderGroup;
+	//private static Shader combiner;
 
-	private static ShaderGroup newGroup() throws IOException {
+	private static void newGroup() throws IOException {
+		if (shaderGroup != null) shaderGroup.close();
+		//if (combiner != null) combiner.close();
+
 		Minecraft mc = Minecraft.getInstance();
 		int w = mc.getMainWindow().getFramebufferWidth();
 		int h = mc.getMainWindow().getFramebufferHeight();
-		ShaderGroup shaderGroup = new ShaderGroup(
+		shaderGroup = new ShaderGroup(
 				mc.textureManager,
 				mc.getResourceManager(),
 				mc.getFramebuffer(),
@@ -45,7 +61,15 @@ public class ClientHandler {
 		//shaderGroup.addFramebuffer(Ref.locStr("main"), w, h);
 		shaderGroup.createBindFramebuffers(w, h);
 
-		return shaderGroup;
+		/*Framebuffer a = shaderGroup.getFramebufferRaw("a");
+		Framebuffer b = shaderGroup.getFramebufferRaw("b");
+
+		combiner = new Shader(
+				mc.getResourceManager(),
+				Ref.locStr("combine"),
+				a, mc.getFramebuffer()
+		);
+		combiner.addAuxFramebuffer("Outlines", b, w, h);*/
 	}
 
 	/*@SubscribeEvent
@@ -113,12 +137,6 @@ public class ClientHandler {
 		int w = mc.getMainWindow().getFramebufferWidth();
 		int h = mc.getMainWindow().getFramebufferHeight();
 
-		/*if (mc.world != null) {
-			for (Entity entity : mc.world.getAllEntities()) {
-				EntityRenderer<? super Entity> renderer = mc.getRenderManager().getRenderer(entity);
-
-			}
-		}*/
 
 		ClientPlayerEntity player = mc.player;
 		if (player == null) return;
@@ -126,38 +144,86 @@ public class ClientHandler {
 			float partialTicks = mc.getRenderPartialTicks();
 
 			if (shaderGroup == null) {
-				try { shaderGroup = newGroup(); }
+				try { newGroup(); }
 				catch (IOException e) { e.printStackTrace(); }
 			}
-			/*Framebuffer framebuffer = shaderGroup.getFramebufferRaw(Ref.locStr("main"));
+
+			shaderGroup.createBindFramebuffers(w, h);
+			Framebuffer framebuffer = shaderGroup.getFramebufferRaw(Ref.locStr("main"));
 			framebuffer.bindFramebuffer(true);
 
-			if (mc.world != null) {
-				for (Entity entity : mc.world.getAllEntities()) {
-					EntityRenderer<? super Entity> renderer = mc.getRenderManager().getRenderer(entity);
-					renderer.render(entity, entity.rotationYaw, event.getPartialTicks(),
-							event.getMatrixStack(), mc.getRenderTypeBuffers().getBufferSource(),
+			ClientWorld world = mc.world;
+			if (world != null) {
+				Vec3d cam = mc.gameRenderer.getActiveRenderInfo().getProjectedView();
+				double cX = cam.getX();
+				double cY = cam.getY();
+				double cZ = cam.getZ();
+
+				for (Entity entity : world.getAllEntities()) {
+					//if (entity instanceof PlayerEntity) continue;
+
+					double eX = MathHelper.lerp(partialTicks, entity.lastTickPosX, entity.getPosX());
+					double eY = MathHelper.lerp(partialTicks, entity.lastTickPosY, entity.getPosY());
+					double eZ = MathHelper.lerp(partialTicks, entity.lastTickPosZ, entity.getPosZ());
+					float f = MathHelper.lerp(partialTicks, entity.prevRotationYaw, entity.rotationYaw);
+					mc.getRenderManager().renderEntityStatic(
+							entity,
+							eX - cX, eY - cY, eZ - cZ,
+							f,
+							partialTicks,
+							event.getMatrixStack(),
+							mc.getRenderTypeBuffers().getBufferSource(),
 							mc.getRenderManager().getPackedLight(entity, event.getPartialTicks())
 					);
 				}
+
+
 			}
 
-			framebuffer.unbindFramebuffer();*/
+			framebuffer.unbindFramebuffer();
 
+			RenderSystem.pushMatrix();
+			RenderSystem.disableBlend();
+			RenderSystem.disableDepthTest();
+			RenderSystem.disableAlphaTest();
+			RenderSystem.enableTexture();
+			RenderSystem.matrixMode(5890);
+			RenderSystem.pushMatrix(); //Overflow?
+			RenderSystem.loadIdentity();
 			shaderGroup.render(partialTicks);
+			RenderSystem.popMatrix(); //Underflow?
+			RenderSystem.popMatrix(); //Underflow?
 
-			Framebuffer a = shaderGroup.getFramebufferRaw("a");
-			a.bindFramebufferTexture();
+			//double depth = 500;
+
+
+
+			/*RenderSystem.pushMatrix();
+			RenderSystem.ortho(0.0D, w, h, 0.0D, 1000.0D, 3000.0D);
+			mc.getFramebuffer().bindFramebuffer(true);
+			frame.bindFramebufferTexture();
 			RenderSystem.depthMask(false);
 			BufferBuilder bufferbuilder = Tessellator.getInstance().getBuffer();
 			bufferbuilder.begin(7, DefaultVertexFormats.POSITION_COLOR);
-			bufferbuilder.pos(0.0D, 0.0D, 500.0D).color(255, 255, 255, 255).endVertex();
-			bufferbuilder.pos(w, 0.0D, 500.0D).color(255, 255, 255, 255).endVertex();
-			bufferbuilder.pos(w, h, 500.0D).color(255, 255, 255, 255).endVertex();
-			bufferbuilder.pos(0.0D, h, 500.0D).color(255, 255, 255, 255).endVertex();
+			bufferbuilder.pos(0.0D, 0.0D, depth).color(255, 255, 255, 255).endVertex();
+			bufferbuilder.pos(w, 0.0D, depth).color(255, 255, 255, 255).endVertex();
+			bufferbuilder.pos(w, h, depth).color(255, 255, 255, 255).endVertex();
+			bufferbuilder.pos(0.0D, h, depth).color(255, 255, 255, 255).endVertex();
 			bufferbuilder.finishDrawing();
 			WorldVertexBufferUploader.draw(bufferbuilder);
 			RenderSystem.depthMask(true);
-		}
+			mc.getFramebuffer().unbindFramebufferTexture();
+			frame.unbindFramebufferTexture();
+			RenderSystem.popMatrix();*/
+		} else {
+			if (shaderGroup != null){
+				shaderGroup.close();
+				shaderGroup = null;
+			}
+			/*if (combiner != null) {
+				combiner.close();
+				combiner = null;
+			}*/
+	}
 	}
 }

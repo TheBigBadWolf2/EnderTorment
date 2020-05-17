@@ -18,4 +18,5 @@ void main() {
     float total = clamp(leftDiff + rightDiff + upDiff + downDiff, 0.0, 1.0);
     vec3 outColor = center.rgb * center.a + left.rgb * left.a + right.rgb * right.a + up.rgb * up.a + down.rgb * down.a;
     gl_FragColor = vec4(outColor * 0.2, total);
+    //gl_FragColor = vec4(vec3(1.0), total);
 }
