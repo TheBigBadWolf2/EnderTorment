@@ -1,0 +1,32 @@
+{
+  "type": "minecraft:block",
+  "pools": [
+    {
+      "rolls": 1,
+      "entries": [
+        {
+          "type": "minecraft:item",
+          "functions": [
+            {
+              "function": "minecraft:copy_nbt",
+              "source": "block_entity",
+              "ops": [
+                {
+                  "source": "flux",
+                  "target": "BlockEntityTag.flux",
+                  "op": "replace"
+                },
+                {
+                  "source": "Enchantments",
+                  "target": "Enchantments",
+                  "op": "replace"
+                }
+              ]
+            }
+          ],
+          "name": "ender_torment:ender_flux_converter"
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,22 @@
+{
+  "targets": [
+    "a", "b"
+  ],
+  "passes": [
+    {
+      "name": "ender_torment:flux_vision_a",
+      "intarget": "minecraft:main",
+      "outtarget": "a"
+    },
+    {
+      "name": "ender_torment:flux_vision_b",
+      "intarget": "a",
+      "outtarget": "in"
+    },
+    {
+      "name": "blit",
+      "intarget": "out",
+      "outtarget": "minecraft:main"
+    }
+  ]
+}
