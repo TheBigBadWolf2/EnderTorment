@@ -1,0 +1,17 @@
+{
+  "targets": [
+    "layerIn1",
+    "layerIn2",
+    "layerOut"
+  ],
+  "passes": [
+    {
+      "name": "ender_torment:layer",
+      "intarget": "minecraft:main",
+      "outtarget": "layerOut",
+      "auxtargets": [
+        { "name": "layerIn2", "id": "Layer2" }
+      ]
+    }
+  ]
+}

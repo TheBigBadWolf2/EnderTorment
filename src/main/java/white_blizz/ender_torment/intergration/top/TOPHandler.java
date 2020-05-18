@@ -15,6 +15,7 @@ import net.minecraftforge.common.util.LazyOptional;
 import white_blizz.ender_torment.common.block.IEnderFluxBlock;
 import white_blizz.ender_torment.common.ender_flux.IEnderFluxGenerator;
 import white_blizz.ender_torment.common.ender_flux.IEnderFluxStorage;
+import white_blizz.ender_torment.common.potion.ETEffects;
 import white_blizz.ender_torment.utils.Conversion;
 import white_blizz.ender_torment.utils.ETUtils;
 import white_blizz.ender_torment.utils.InfoUtils;
@@ -234,6 +235,29 @@ public final class TOPHandler {
 		}
 	}
 
+	private static class ETVisionImpaired implements IBlockDisplayOverride, IEntityDisplayOverride {
+
+		private boolean isVisionImpaired(PlayerEntity player) {
+			return player.isPotionActive(ETEffects.FLUX_VISION.get());
+		}
+
+		@Override
+		public boolean overrideStandardInfo(
+				ProbeMode probeMode, IProbeInfo iProbeInfo,
+				PlayerEntity player, World world,
+				BlockState blockState, IProbeHitData iProbeHitData) {
+			return isVisionImpaired(player);
+		}
+
+		@Override
+		public boolean overrideStandardInfo(
+				ProbeMode probeMode, IProbeInfo iProbeInfo,
+				PlayerEntity player, World world,
+				Entity entity, IProbeHitEntityData iProbeHitEntityData) {
+			return isVisionImpaired(player);
+		}
+	}
+
 	@SuppressWarnings("unused")
 	public static class GetTheOneProbe implements Function<ITheOneProbe, Void> {
 		@Override
@@ -256,6 +280,9 @@ public final class TOPHandler {
 								.showChestContentsDetailed(IProbeConfig.ConfigMode.EXTENDED);
 				}
 			});
+			ETVisionImpaired impaired = new ETVisionImpaired();
+			iTheOneProbe.registerBlockDisplayOverride(impaired);
+			iTheOneProbe.registerEntityDisplayOverride(impaired);
 			return null;
 		}
 	}

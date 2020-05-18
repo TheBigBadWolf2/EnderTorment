@@ -1,6 +1,7 @@
 package white_blizz.ender_torment.client;
 
 import com.google.common.collect.Streams;
+import com.mojang.blaze3d.matrix.MatrixStack;
 import com.mojang.blaze3d.platform.GlStateManager;
 import com.mojang.blaze3d.systems.RenderSystem;
 import net.minecraft.client.Minecraft;
@@ -30,11 +31,18 @@ import white_blizz.ender_torment.common.potion.ETEffects;
 import white_blizz.ender_torment.utils.Ref;
 
 import java.io.IOException;
+import java.util.function.BiConsumer;
+import java.util.function.Consumer;
 import java.util.stream.Stream;
 
 @OnlyIn(Dist.CLIENT)
 @Mod.EventBusSubscriber(value = Dist.CLIENT, modid = Ref.MOD_ID, bus = Mod.EventBusSubscriber.Bus.FORGE)
 public class ClientHandler {
+	private static final ResourceLocation EMPTY_SHADER_LOC = Ref.loc(
+			"shaders/post/",
+			"empty",
+			"json"
+	);
 	private static final ResourceLocation SHADER_LOC = Ref.loc(
 			"shaders/post/",
 			"flux_vision",
@@ -61,6 +69,7 @@ public class ClientHandler {
 		//shaderGroup.addFramebuffer(Ref.locStr("main"), w, h);
 		shaderGroup.createBindFramebuffers(w, h);
 
+
 		/*Framebuffer a = shaderGroup.getFramebufferRaw("a");
 		Framebuffer b = shaderGroup.getFramebufferRaw("b");
 
@@ -70,6 +79,20 @@ public class ClientHandler {
 				a, mc.getFramebuffer()
 		);
 		combiner.addAuxFramebuffer("Outlines", b, w, h);*/
+	}
+
+	private static void newGroup2() throws IOException {
+		if (shaderGroup != null) shaderGroup.close();
+		Minecraft mc = Minecraft.getInstance();
+		int w = mc.getMainWindow().getFramebufferWidth();
+		int h = mc.getMainWindow().getFramebufferHeight();
+		shaderGroup = new ShaderGroup(
+				mc.textureManager,
+				mc.getResourceManager(),
+				mc.getFramebuffer(),
+				SHADER_LOC
+		);
+		shaderGroup.createBindFramebuffers(w, h);
 	}
 
 	/*@SubscribeEvent
@@ -131,8 +154,46 @@ public class ClientHandler {
 		}*//*
 	}*/
 
-	@SubscribeEvent
-	public static void render(RenderWorldLastEvent event) {
+	private static void doSpecialRender(String name, BiConsumer<Minecraft, ClientWorld> renderer) {
+		Minecraft mc = Minecraft.getInstance();
+		ClientWorld world = mc.world;
+		if (world == null || shaderGroup == null) return;
+		Framebuffer framebuffer = shaderGroup.getFramebufferRaw(name);
+		//100% can be null
+		//noinspection ConstantConditions
+		if (framebuffer == null) return;
+		framebuffer.bindFramebuffer(true);
+		renderer.accept(mc, world);
+		framebuffer.unbindFramebuffer();
+	}
+
+	private static void specialRenders(MatrixStack matrixStack, float partialTicks) {
+		doSpecialRender(Ref.locStr("main"), (mc, world) -> {
+			Vec3d cam = mc.gameRenderer.getActiveRenderInfo().getProjectedView();
+			double cX = cam.getX();
+			double cY = cam.getY();
+			double cZ = cam.getZ();
+
+			for (Entity entity : world.getAllEntities()) {
+				if (entity instanceof PlayerEntity) continue;
+
+				double eX = MathHelper.lerp(partialTicks, entity.lastTickPosX, entity.getPosX());
+				double eY = MathHelper.lerp(partialTicks, entity.lastTickPosY, entity.getPosY());
+				double eZ = MathHelper.lerp(partialTicks, entity.lastTickPosZ, entity.getPosZ());
+				float f = MathHelper.lerp(partialTicks, entity.prevRotationYaw, entity.rotationYaw);
+				mc.getRenderManager().renderEntityStatic(
+						entity,
+						eX - cX, eY - cY, eZ - cZ, f,
+						partialTicks,
+						matrixStack,
+						mc.getRenderTypeBuffers().getBufferSource(),
+						mc.getRenderManager().getPackedLight(entity, partialTicks)
+				);
+			}
+		});
+	}
+
+	public static void renderA(RenderWorldLastEvent event) throws IOException {
 		Minecraft mc = Minecraft.getInstance();
 		int w = mc.getMainWindow().getFramebufferWidth();
 		int h = mc.getMainWindow().getFramebufferHeight();
@@ -143,56 +204,13 @@ public class ClientHandler {
 		if (player.isPotionActive(ETEffects.FLUX_VISION.get())) {
 			float partialTicks = mc.getRenderPartialTicks();
 
-			if (shaderGroup == null) {
-				try { newGroup(); }
-				catch (IOException e) { e.printStackTrace(); }
-			}
+			if (shaderGroup == null) newGroup();
 
 			shaderGroup.createBindFramebuffers(w, h);
-			Framebuffer framebuffer = shaderGroup.getFramebufferRaw(Ref.locStr("main"));
-			framebuffer.bindFramebuffer(true);
 
-			ClientWorld world = mc.world;
-			if (world != null) {
-				Vec3d cam = mc.gameRenderer.getActiveRenderInfo().getProjectedView();
-				double cX = cam.getX();
-				double cY = cam.getY();
-				double cZ = cam.getZ();
+			specialRenders(event.getMatrixStack(), partialTicks);
+			render(partialTicks);
 
-				for (Entity entity : world.getAllEntities()) {
-					//if (entity instanceof PlayerEntity) continue;
-
-					double eX = MathHelper.lerp(partialTicks, entity.lastTickPosX, entity.getPosX());
-					double eY = MathHelper.lerp(partialTicks, entity.lastTickPosY, entity.getPosY());
-					double eZ = MathHelper.lerp(partialTicks, entity.lastTickPosZ, entity.getPosZ());
-					float f = MathHelper.lerp(partialTicks, entity.prevRotationYaw, entity.rotationYaw);
-					mc.getRenderManager().renderEntityStatic(
-							entity,
-							eX - cX, eY - cY, eZ - cZ,
-							f,
-							partialTicks,
-							event.getMatrixStack(),
-							mc.getRenderTypeBuffers().getBufferSource(),
-							mc.getRenderManager().getPackedLight(entity, event.getPartialTicks())
-					);
-				}
-
-
-			}
-
-			framebuffer.unbindFramebuffer();
-
-			RenderSystem.pushMatrix();
-			RenderSystem.disableBlend();
-			RenderSystem.disableDepthTest();
-			RenderSystem.disableAlphaTest();
-			RenderSystem.enableTexture();
-			RenderSystem.matrixMode(5890);
-			RenderSystem.pushMatrix(); //Overflow?
-			RenderSystem.loadIdentity();
-			shaderGroup.render(partialTicks);
-			RenderSystem.popMatrix(); //Underflow?
-			RenderSystem.popMatrix(); //Underflow?
 
 			//double depth = 500;
 
@@ -224,6 +242,21 @@ public class ClientHandler {
 				combiner.close();
 				combiner = null;
 			}*/
+		}
 	}
+
+	private static void render(float partialTicks) {
+		//RenderSystem.pushMatrix();
+		RenderSystem.disableBlend();
+		RenderSystem.disableDepthTest();
+		RenderSystem.disableAlphaTest();
+		RenderSystem.enableTexture();
+		RenderSystem.matrixMode(5890);
+		//RenderSystem.pushMatrix(); //Overflow?
+		RenderSystem.loadIdentity();
+		shaderGroup.render(partialTicks);
+		//RenderSystem.popMatrix(); //Underflow?
+		RenderSystem.matrixMode(5889);
+		//RenderSystem.popMatrix(); //Underflow?
 	}
 }

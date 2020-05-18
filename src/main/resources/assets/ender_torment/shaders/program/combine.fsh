@@ -22,11 +22,13 @@ void main() {
 
     if (outline.a > 0) {
         if (outline.a < 1) {
-            color.rgb = main.rgb * (1 - outline.a);
-            color.rgb += outline.rgb * outline.a;
+            color.rgb = clamp((main.rgb * (1 - outline.a)) + (outline.rgb * outline.a), 0.0, 1.0);
             color.a = 1.0;
         } else color = vec4(outline);
     } else color = vec4(main);
 
     gl_FragColor = color;
+    /*outline.a = 1.0;
+    gl_FragColor = outline;*/
+
 }

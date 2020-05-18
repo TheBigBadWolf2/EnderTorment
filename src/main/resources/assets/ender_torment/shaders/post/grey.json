@@ -1,0 +1,12 @@
+{
+  "targets": [
+    "grey"
+  ],
+  "passes": [
+    {
+      "name": "ender_torment:grey",
+      "intarget": "minecraft:main",
+      "outtarget": "grey"
+    }
+  ]
+}

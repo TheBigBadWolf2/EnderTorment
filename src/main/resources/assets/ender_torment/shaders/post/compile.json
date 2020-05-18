@@ -1,0 +1,18 @@
+{
+  "targets": [
+    "grey", "outlines"
+  ],
+  "passes": [
+    {
+      "name": "ender_torment:combine",
+      "intarget": "grey",
+      "auxtargets": [
+        {
+          "name": "outlines",
+          "id": "Outlines"
+        }
+      ],
+      "outtarget": "minecraft:main"
+    }
+  ]
+}
