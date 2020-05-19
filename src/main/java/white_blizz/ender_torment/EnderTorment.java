@@ -1,16 +1,21 @@
 package white_blizz.ender_torment;
 
 import com.google.common.collect.ImmutableList;
+import net.minecraftforge.common.ForgeConfigSpec;
 import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.eventbus.api.IEventBus;
+import net.minecraftforge.fml.DistExecutor;
 import net.minecraftforge.fml.InterModComms;
+import net.minecraftforge.fml.ModLoadingContext;
 import net.minecraftforge.fml.common.Mod;
+import net.minecraftforge.fml.config.ModConfig;
 import net.minecraftforge.fml.event.lifecycle.FMLCommonSetupEvent;
 import net.minecraftforge.fml.event.lifecycle.GatherDataEvent;
 import net.minecraftforge.fml.event.lifecycle.InterModEnqueueEvent;
 import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import white_blizz.ender_torment.client.ClientConfig;
 import white_blizz.ender_torment.common.block.ETBlocks;
 import white_blizz.ender_torment.common.container.ETContainers;
 import white_blizz.ender_torment.common.enchantment.CapabilityEnchantableBlock;
@@ -28,9 +33,15 @@ import java.util.List;
 public final class EnderTorment {
 	//Todo: Add mini boss named "Lambda"
 
+	private static EnderTorment INSTANCE;
+	public static EnderTorment getINSTANCE() { return INSTANCE; }
+
+	public final IConfig SIDED_CONFIG;
+
 	public static final Logger LOGGER = LogManager.getLogger();
 
 	public EnderTorment() {
+		INSTANCE = this;
 		IEventBus modEventBus = FMLJavaModLoadingContext.get().getModEventBus();
 		IEventBus forgeEventBus = MinecraftForge.EVENT_BUS;
 
@@ -50,7 +61,13 @@ public final class EnderTorment {
 			if (handler.regModBus()) modEventBus.register(handler);
 			if (handler.regForgeBus()) forgeEventBus.register(handler);
 		}
+
+
+
+		SIDED_CONFIG = DistExecutor.runForDist(() -> ClientConfig::new, () -> () -> new IConfig() {});
+
 	}
+
 
 	private void gatherData(GatherDataEvent event) {
 		EnderTormentData.gatherData(event);

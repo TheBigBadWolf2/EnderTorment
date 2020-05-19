@@ -2,31 +2,27 @@ package white_blizz.ender_torment.client;
 
 import com.mojang.blaze3d.matrix.MatrixStack;
 import com.mojang.blaze3d.systems.RenderSystem;
-import net.minecraft.block.Blocks;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.entity.player.ClientPlayerEntity;
-import net.minecraft.client.renderer.Tessellator;
-import net.minecraft.client.shader.Framebuffer;
-import net.minecraft.client.shader.Shader;
-import net.minecraft.client.shader.ShaderGroup;
-import net.minecraft.client.shader.ShaderUniform;
+import net.minecraft.client.shader.*;
+import net.minecraft.client.util.JSONException;
 import net.minecraft.client.world.ClientWorld;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.monster.IMob;
 import net.minecraft.entity.passive.AnimalEntity;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.util.ResourceLocation;
-import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.Vec3d;
-import net.minecraft.world.World;
+import net.minecraft.util.text.StringTextComponent;
+import net.minecraft.util.text.TextFormatting;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.api.distmarker.OnlyIn;
 import net.minecraftforge.client.event.RenderWorldLastEvent;
-import net.minecraftforge.client.model.data.EmptyModelData;
-import net.minecraftforge.common.util.BlockSnapshot;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
+import net.minecraftforge.fml.common.ObfuscationReflectionHelper;
+import white_blizz.ender_torment.EnderTorment;
 import white_blizz.ender_torment.common.potion.ETEffects;
 import white_blizz.ender_torment.utils.Ref;
 
@@ -34,7 +30,6 @@ import javax.annotation.Nullable;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.function.BiPredicate;
 import java.util.function.Predicate;
 import java.util.stream.StreamSupport;
 
@@ -42,29 +37,59 @@ import java.util.stream.StreamSupport;
 @Mod.EventBusSubscriber(value = Dist.CLIENT, modid = Ref.MOD_ID, bus = Mod.EventBusSubscriber.Bus.FORGE)
 public final class ShaderHandler implements AutoCloseable {
 	private static ShaderHandler INSTANCE;
-
+	private static long nextRetryTime = -1;
 
 	@SubscribeEvent
-	public static void render(RenderWorldLastEvent event) throws IOException {
+	public static void render(RenderWorldLastEvent event) {
 		Minecraft mc = Minecraft.getInstance();
 
 		ClientPlayerEntity player = mc.player;
 		if (player == null) return;
 		if (player.isPotionActive(ETEffects.FLUX_VISION.get())) {
-			if (INSTANCE == null) INSTANCE = new ShaderHandler(
-					null,
-					new ILayerInfo() {
-						@Override public boolean testEntity(Entity entity) { return entity instanceof IMob; }
-						//@Override public boolean testBlock(World world, BlockPos pos) { return false; }
-						@Override public int getColor() { return 0xFF0000; }
-					},
-					new ILayerInfo() {
-						@Override public boolean testEntity(Entity entity) { return entity instanceof AnimalEntity; }
-						//@Override public boolean testBlock(World world, BlockPos pos) { return world.getBlockState(pos).getBlock() == Blocks.LEVER; }
-						@Override public int getColor() { return 0x00FF00; }
+			if (event.getFinishTimeNano() > nextRetryTime) {
+				if (INSTANCE == null) {
+					try {
+						INSTANCE = new ShaderHandler(
+								null,
+								new ILayerInfo() {
+									@Override
+									public boolean testEntity(Entity entity) {
+										return entity instanceof IMob;
+									}
+
+									//@Override public boolean testBlock(World world, BlockPos pos) { return false; }
+									@Override
+									public int getColor() {
+										return ClientConfig.get().getHostileColor();
+									}
+									//@Override public String getShader() { return "outline_layer"; }
+								},
+								new ILayerInfo() {
+									@Override
+									public boolean testEntity(Entity entity) {
+										return entity instanceof AnimalEntity;
+									}
+
+									//@Override public boolean testBlock(World world, BlockPos pos) { return world.getBlockState(pos).getBlock() == Blocks.LEVER; }
+									@Override
+									public int getColor() {
+										return ClientConfig.get().getAnimalColor();
+									}
+								}
+						);
+					} catch (IOException e) {
+						player.sendStatusMessage(
+								new StringTextComponent("Error loading shader!")
+										.applyTextStyle(TextFormatting.RED),
+								true
+						);
+						EnderTorment.LOGGER.error("Could not create Handler!", e);
+						nextRetryTime = event.getFinishTimeNano() + 1000000000L;
 					}
-			);
-			INSTANCE.render(event.getMatrixStack(), event.getPartialTicks());
+				}
+				if (INSTANCE != null)
+					INSTANCE.render(event.getMatrixStack(), event.getPartialTicks());
+			}
 		} else if (INSTANCE != null) {
 			INSTANCE.close();
 			INSTANCE = null;
@@ -74,18 +99,27 @@ public final class ShaderHandler implements AutoCloseable {
 	private static ResourceLocation getPost(String name) {
 		return Ref.loc("shaders/post/", name, "json");
 	}
+	private static ShaderGroup newShaderGroup(Minecraft mc, Framebuffer in, String post) throws IOException {
+		return new ShaderGroup(
+				mc.textureManager,
+				mc.getResourceManager(),
+				in, getPost(post)
+		);
+	}
+
 
 	private static Framebuffer addAndGetFrameBuffer(ShaderGroup shaderGroup, String name, int width, int height) {
 		shaderGroup.addFramebuffer(name, width, height);
 		return shaderGroup.getFramebufferRaw(name);
 	}
 
-	private final ShaderGroup grayer, outlineLayer;
+	private final ShaderGroup grayer;
 
 	public interface ILayerInfo {
 		boolean testEntity(Entity entity);
 		//boolean testBlock(World world, BlockPos pos);
-		int getColor();
+		@Nullable default String getShader() { return null; }
+		default int getColor() { return -1; }
 	}
 
 	@SuppressWarnings("PointlessBitwiseExpression") //It looks good...
@@ -96,17 +130,12 @@ public final class ShaderHandler implements AutoCloseable {
 		//private final BiPredicate<World, BlockPos> blockPred;
 
 		private Layer(Minecraft mc, Framebuffer buffIn, Predicate<Entity> entityPred, /*BiPredicate<World, BlockPos> blockPred,*/ int color) throws IOException {
-			this.entityPred = entityPred;
+			/*this.entityPred = entityPred;
 			//this.blockPred = blockPred;
 			int width = buffIn.framebufferWidth;
 			int height = buffIn.framebufferHeight;
 			//this.buffIn = buffIn;
-			outlineLayer = new ShaderGroup(
-					mc.textureManager,
-					mc.getResourceManager(),
-					buffIn,
-					getPost("empty")
-			);
+			outlineLayer = newShaderGroup(mc, buffIn, "empty");
 			this.buffOut = addAndGetFrameBuffer(outlineLayer, "out", width, height);
 			this.buff = addAndGetFrameBuffer(outlineLayer, "entity", width, height);
 			Framebuffer frameB = addAndGetFrameBuffer(outlineLayer, "b", width, height);
@@ -123,7 +152,40 @@ public final class ShaderHandler implements AutoCloseable {
 				);
 			}
 			Shader layerer = outlineLayer.addShader(Ref.locStr("layer"), buffIn, buffOut);
-			layerer.addAuxFramebuffer("Layer2", frameB, width, height);
+			layerer.addAuxFramebuffer("Layer2", frameB, width, height);*/
+			this(mc, buffIn, entityPred, "outline_layer");
+			List<Shader> list = ObfuscationReflectionHelper.getPrivateValue(
+					ShaderGroup.class, outlineLayer,
+					"field_148031_d");
+			if (list != null)
+				list.stream().filter(shader -> {
+					final ShaderInstance manager = shader.getShaderManager();
+					final String name = ObfuscationReflectionHelper.getPrivateValue(
+							ShaderInstance.class,
+							manager,
+							"field_216556_l"
+					);
+					return Ref.locStr("outline").equals(name);
+				}).findFirst().ifPresent(shader -> {
+					ShaderUniform outlineColor = shader.getShaderManager().func_216539_a("OutlineColor");
+					if (outlineColor != null) {
+						int r = (color >> 16) & 255;
+						int g = (color >>  8) & 255;
+						int b = (color >>  0) & 255;
+						outlineColor.set(
+								r / 255F,
+								g / 255F,
+								b / 255F
+						);
+					}
+				});
+		}
+
+		private Layer(Minecraft mc, Framebuffer buffIn, Predicate<Entity> entityPred, String name) throws IOException {
+			this.entityPred = entityPred;
+			outlineLayer = newShaderGroup(mc, buffIn, name);
+			buff = outlineLayer.getFramebufferRaw("entity_buffer");
+			buffOut = outlineLayer.getFramebufferRaw("out_buffer");
 		}
 
 		@Override public void close() { outlineLayer.close(); }
@@ -136,42 +198,49 @@ public final class ShaderHandler implements AutoCloseable {
 		Minecraft mc = Minecraft.getInstance();
 		int w = mc.getMainWindow().getFramebufferWidth();
 		int h = mc.getMainWindow().getFramebufferHeight();
-		grayer = new ShaderGroup(
-				mc.textureManager,
-				mc.getResourceManager(),
+		grayer = newShaderGroup(
+				mc,
 				mc.getFramebuffer(),
-				getPost("grey")
+				"grey"
 		);
 		Shader combiner = grayer.addShader(Ref.locStr("combine"),
 				grayer.getFramebufferRaw("grey"),
 				mc.getFramebuffer());
 
-		outlineLayer = new ShaderGroup(
+		/*outlineLayer = new ShaderGroup(
 				mc.textureManager,
 				mc.getResourceManager(),
 				mc.getFramebuffer(),
 				getPost("empty")
-		);
+		);*/
 
-		final Framebuffer[] in = {new Framebuffer(w, h, true, Minecraft.IS_RUNNING_ON_MAC)};
+		class L {
+			Framebuffer in = new Framebuffer(w, h, true, Minecraft.IS_RUNNING_ON_MAC);
 
-		class C {
 			Layer apply(Predicate<Entity> test1, /*BiPredicate<World, BlockPos> test2,*/ int color) throws IOException {
-				Layer layer = new Layer(mc, in[0], test1, /*test2,*/ color);
-				in[0] = layer.buffOut;
-
+				Layer layer = new Layer(mc, in, test1, /*test2,*/ color);
+				in = layer.buffOut;
+				return layer;
+			}
+			Layer apply(Predicate<Entity> test1, String name) throws IOException {
+				Layer layer = new Layer(mc, in, test1, name);
+				in = layer.buffOut;
 				return layer;
 			}
 		}
-		C newLayer = new C();
+		L newLayer = new L();
 
-		//for (ILayerInfo layerInfo : layerInfoList) layers.add(newLayer.apply(layerInfo::testEntity, /*layerInfo::testBlock,*/ layerInfo.getColor()));
-		layers.add(newLayer.apply(ent -> ent instanceof IMob, 0xFF0000));
-		layers.add(newLayer.apply(ent -> ent instanceof AnimalEntity, 0x00FF00));
+		for (ILayerInfo layerInfo : layerInfoList) {
+			String name = layerInfo.getShader();
+			if (name == null) layers.add(newLayer.apply(layerInfo::testEntity, layerInfo.getColor()));
+			else layers.add(newLayer.apply(layerInfo::testEntity, name));
+		}
+		//layers.add(newLayer.apply(ent -> ent instanceof IMob, 0xFF0000));
+		//layers.add(newLayer.apply(ent -> ent instanceof AnimalEntity, 0x00FF00));
 
 		fallBack = fallBackColor != null ? newLayer.apply(ent -> true, /*(wd, p) -> true,*/ fallBackColor) : null;
 
-		combiner.addAuxFramebuffer("Outlines", in[0], w, h);
+		combiner.addAuxFramebuffer("Outlines", newLayer.in, w, h);
 		grayer.createBindFramebuffers(w, h);
 		/*compile = new ShaderGroup(
 				mc.textureManager,
@@ -286,8 +355,6 @@ public final class ShaderHandler implements AutoCloseable {
 			//render(combiner, partialTicks);
 			grayer.createBindFramebuffers(w, h);
 			render(grayer, partialTicks);
-
-
 		}
 	}
 
@@ -316,7 +383,7 @@ public final class ShaderHandler implements AutoCloseable {
 	@Override
 	public void close() {
 		grayer.close();
-		outlineLayer.close();
+		//outlineLayer.close();
 		layers.forEach(Layer::close);
 		if (fallBack != null) fallBack.close();
 		//compile.close();

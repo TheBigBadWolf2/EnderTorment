@@ -12,7 +12,6 @@ uniform sampler2D Outlines;
 // It ranges from 0 to 1.
 // It is interpolated from between the positions of the positions sent to the vertex shader (that's what varying's do)
 varying in vec2 texCoord;
-varying in vec2 oneTexel;
 
 void main() {
     vec4 main = texture2D(DiffuseSampler, texCoord);

@@ -4,7 +4,7 @@
     "srcrgb": "one",
     "dstrgb": "zero"
   },
-  "vertex": "sobel",
+  "vertex": "ender_torment:effect",
   "fragment": "ender_torment:grey",
   "attributes": [ "Position" ],
   "samplers": [

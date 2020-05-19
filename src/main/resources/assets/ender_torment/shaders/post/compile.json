@@ -8,8 +8,8 @@
       "intarget": "grey",
       "auxtargets": [
         {
-          "name": "outlines",
-          "id": "Outlines"
+          "name": "Outlines",
+          "id": "outlines"
         }
       ],
       "outtarget": "minecraft:main"

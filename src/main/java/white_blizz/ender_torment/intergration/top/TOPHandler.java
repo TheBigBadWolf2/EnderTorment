@@ -33,51 +33,23 @@ public final class TOPHandler {
 	public static Capability<IEnderFluxStorage> ENDER_FLUX = null;
 
 	private static class EnderFluxStyle implements IReadOnlyProgressStyle {
-		private int borderColor = 0xFF880088,
-				backgroundColor = 0xFF000000,
-				filledColor = 0xFF440044,
-				altFilledColor = 0xFF880088;
-		private boolean showText = true;
-		private NumberFormat format = NumberFormat.COMPACT;
-		private String prefix = "", suffix = " EF";
-		private int width = 100, height = 10;
-
 		private EnderFluxStyle() {}
 
-		/*@Override public IProgressStyle borderColor(int i) { borderColor = i;return this; }
-		@Override public IProgressStyle backgroundColor(int i) { backgroundColor = i;return this; }
+		@Override public int getBorderColor() { return 0xFF880088; }
+		@Override public int getBackgroundColor() { return 0xFF000000; }
 
-		@Override public IProgressStyle filledColor(int i) { filledColor = i;return this; }
-		@Override public IProgressStyle alternateFilledColor(int i) { altFilledColor = i;return this; }
+		@Override public int getFilledColor() { return 0xFF440044; }
+		@Override public int getAlternatefilledColor() { return 0xFF880088; }
 
-		@Override public IProgressStyle showText(boolean b) { showText = b;return this; }
+		@Override public boolean isShowText() { return true; }
 
-		@Override public IProgressStyle numberFormat(NumberFormat numberFormat) { format = numberFormat;return this; }
+		@Override public NumberFormat getNumberFormat() { return NumberFormat.COMPACT; }
 
-		@Override public IProgressStyle prefix(String s) { prefix = s;return this; }
-		@Override public IProgressStyle suffix(String s) { suffix = s;return this; }
+		@Override public String getPrefix() { return ""; }
+		@Override public String getSuffix() { return "EF"; }
 
-		@Override public IProgressStyle width(int i) { width = i;return this; }
-		@Override public IProgressStyle height(int i) { height = i;return this; }
-
-		@Override public IProgressStyle lifeBar(boolean b) { isLifeBar = b;return this; }
-		@Override public IProgressStyle armorBar(boolean b) { isArmorBar = b;return this; }*/
-
-		@Override public int getBorderColor() { return borderColor; }
-		@Override public int getBackgroundColor() { return backgroundColor; }
-
-		@Override public int getFilledColor() { return filledColor; }
-		@Override public int getAlternatefilledColor() { return altFilledColor; }
-
-		@Override public boolean isShowText() { return showText; }
-
-		@Override public NumberFormat getNumberFormat() { return format; }
-
-		@Override public String getPrefix() { return prefix; }
-		@Override public String getSuffix() { return suffix; }
-
-		@Override public int getWidth() { return width; }
-		@Override public int getHeight() { return height; }
+		@Override public int getWidth() { return 100; }
+		@Override public int getHeight() { return 10; }
 
 		@Override public boolean isLifeBar() { return false; }
 		@Override public boolean isArmorBar() { return false; }
@@ -87,7 +59,6 @@ public final class TOPHandler {
 			ProbeMode probeMode, IProbeInfo iProbeInfo,
 			IEnderFluxStorage fluxStorage
 	) {
-
 		EnderFluxStyle style = new EnderFluxStyle();
 
 		IProbeInfo v = iProbeInfo.vertical();

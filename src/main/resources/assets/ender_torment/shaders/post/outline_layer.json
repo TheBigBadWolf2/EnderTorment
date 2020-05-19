@@ -1,8 +1,25 @@
 {
   "targets": [
-
+    "entity_buffer",
+    "step",
+    "out_buffer"
   ],
   "passes": [
-
+    {
+      "name": "ender_torment:outline",
+      "intarget": "entity_buffer",
+      "outtarget": "step",
+      "uniforms": [
+        { "name": "OutlineColor", "values": [1.0, 0.0, 0.0] }
+      ]
+    },
+    {
+      "name": "ender_torment:layer",
+      "intarget": "minecraft:main",
+      "auxtargets": [
+        { "name": "Layer2", "id": "step" }
+      ],
+      "outtarget": "out_buffer"
+    }
   ]
 }
