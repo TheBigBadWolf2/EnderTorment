@@ -4,8 +4,18 @@ uniform sampler2D DiffuseSampler;
 
 uniform vec3 OutlineColor;
 
+const float ColorDull = 0.2;
+const float AlphaDull = 0.5;
+
 varying in vec2 texCoord;
 varying in vec2 oneTexel;
+varying in vec2 Centered;
+
+float getDist() {
+    float x = abs(Centered.x);
+    float y = abs(Centered.y);
+    return 1.0 - sqrt(x * x + y * y);
+}
 
 void main() {
     vec4 center = texture2D(DiffuseSampler, texCoord.xy);
@@ -23,8 +33,8 @@ void main() {
 
     //vec3 outColor = center.rgb * center.a + left.rgb * left.a + right.rgb * right.a + up.rgb * up.a + down.rgb * down.a;
 
-    if (center.a >= total) gl_FragColor = vec4(center.rgb * 0.2, center.a * 0.5);
-    else gl_FragColor = vec4(OutlineColor, total);
+    if (center.a >= total) gl_FragColor = vec4(center.rgb * ColorDull * getDist(), center.a * AlphaDull);
+    else gl_FragColor = vec4(OutlineColor * getDist(), total);
     //gl_FragColor = vec4(outColor * 0.2, total);
 
     /*if (total > 0) gl_FragColor = vec4(OutlineColor, total);

@@ -1,7 +1,6 @@
 package white_blizz.ender_torment.common.item;
 
 import mcp.MethodsReturnNonnullByDefault;
-import net.minecraft.block.Block;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemGroup;
 import net.minecraft.item.ItemStack;
@@ -12,17 +11,17 @@ import net.minecraftforge.fml.RegistryObject;
 import net.minecraftforge.registries.DeferredRegister;
 import net.minecraftforge.registries.ForgeRegistries;
 import net.minecraftforge.registries.IForgeRegistry;
+import white_blizz.ender_torment.common.conduit.ConduitType;
 import white_blizz.ender_torment.common.block.ETBlocks;
 import white_blizz.ender_torment.common.enchantment.ETEnchantmentType;
 import white_blizz.ender_torment.utils.ETDeferredRegisterHandler;
 import white_blizz.ender_torment.utils.Ref;
 
 import java.util.Collection;
-import java.util.function.Supplier;
 
 @MethodsReturnNonnullByDefault
 public final class ETItems extends ETDeferredRegisterHandler {
-	public static final ItemGroup ENDER_MISC = new ItemGroup(Ref.locStr("misc")) {
+	public static final ItemGroup ENDER_MISC = new ItemGroup(Ref.MOD.str.loc("misc")) {
 		@OnlyIn(Dist.CLIENT)
 		@Override
 		public ItemStack createIcon() {
@@ -74,6 +73,7 @@ public final class ETItems extends ETDeferredRegisterHandler {
 	public static final RegistryObject<EnderGunItem> ENDER_GUN = ITEMS.register("ender_gun", EnderGunItem::new);
 	public static final RegistryObject<EnderFluxCapacitorItem> ENDER_FLUX_CAPACITOR = ITEMS.register("ender_flux_capacitor", EnderFluxCapacitorItem::new);
 	public static final RegistryObject<FluxVisionItem> FLUX_VISION = ITEMS.register("flux_vision", FluxVisionItem::new);
+	public static final RegistryObject<BaseConduitItem> CONDUIT = ITEMS.register("conduit", BaseConduitItem::new);
 
 
 	public ETItems(IEventBus bus) { super(bus, ITEMS); }

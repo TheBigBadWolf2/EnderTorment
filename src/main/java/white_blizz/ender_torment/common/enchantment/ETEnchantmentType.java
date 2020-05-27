@@ -10,7 +10,7 @@ import white_blizz.ender_torment.utils.Ref;
 public class ETEnchantmentType {
 	public static final EnchantmentType ENDER_FLUX_ITEMS =
 			EnchantmentType.create(
-					Ref.locStr("ender_flux_item"),
+					Ref.MOD.str.loc("ender_flux_item"),
 					item -> {
 						if (item instanceof IEnderFluxItem) return true;
 						if (item instanceof BlockItem) {
@@ -21,7 +21,7 @@ public class ETEnchantmentType {
 			);
 	public static final EnchantmentType ENDER_FLUX_GEN_ITEMS =
 			EnchantmentType.create(
-					Ref.locStr("ender_flux_gen_item"),
+					Ref.MOD.str.loc("ender_flux_gen_item"),
 					item -> {
 						if (item instanceof IEnderFluxItem) return true;
 						if (item instanceof BlockItem) {

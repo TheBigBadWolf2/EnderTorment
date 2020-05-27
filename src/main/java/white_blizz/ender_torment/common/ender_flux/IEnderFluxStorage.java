@@ -3,6 +3,7 @@ package white_blizz.ender_torment.common.ender_flux;
 import net.minecraft.nbt.CompoundNBT;
 import net.minecraft.util.math.MathHelper;
 import net.minecraftforge.common.util.INBTSerializable;
+import white_blizz.ender_torment.common.CommonConfig;
 import white_blizz.ender_torment.utils.IEnchantmentList;
 
 import java.util.function.BooleanSupplier;
@@ -12,19 +13,28 @@ public interface IEnderFluxStorage
 	/**
 	 * The default value for decay.
 	 */
-	double DEFAULT_DECAY = 0.00005;
+	//double DEFAULT_DECAY = 0.00005;
+	static boolean isDecayEnabled() {
+		return CommonConfig.get().decay_enabled.get();
+	}
+	static double getDefaultDecayRate() {
+		if (isDecayEnabled())
+			return CommonConfig.get().default_decay_rate.get();
+		return 0D;
+	}
 	@FunctionalInterface
 	interface Factory<T> {
 		T make(int capacity, int maxReceive, int maxExtract, int flux, double decay);
 	}
 
+	@SuppressWarnings("PointlessBitwiseExpression")
 	class Builder<T> {
 		private static final int INPUT = 1 << 0;
 		private static final int OUTPUT = 1 << 1;
 
 		private final Factory<T> factory;
 		private int flux = 0, capacity = -1, maxReceive = -1, maxExtract = -1;
-		private double decay = DEFAULT_DECAY;
+		private double decay = getDefaultDecayRate();
 		private int flags = INPUT | OUTPUT;
 
 		public Builder(Factory<T> factory) { this.factory = factory; }
@@ -123,7 +133,7 @@ public interface IEnderFluxStorage
 					capacity,
 					in, out,
 					MathHelper.clamp(flux, 0, capacity),
-					MathHelper.clamp(decay, 0, 1)
+					isDecayEnabled() ? MathHelper.clamp(decay, 0, 1) : 0D
 			);
 		}
 	}

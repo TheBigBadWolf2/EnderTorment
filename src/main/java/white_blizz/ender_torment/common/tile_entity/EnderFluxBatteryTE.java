@@ -34,7 +34,7 @@ public class EnderFluxBatteryTE extends ETTileEntity implements INamedContainerP
 	@CapabilityInject(IEnderFluxStorage.class)
 	public static Capability<IEnderFluxStorage> ENDER_FLUX_CAP = null;
 
-	public EnderFluxBatteryTE() { super(ETBlocks.ENDER_FLUX_BATTERY_TYPE.get()); }
+	public EnderFluxBatteryTE() { super(ETBlocks.ENDER_FLUX_BATTERY_TYPE); }
 
 	@Override
 	public ITextComponent getDisplayName() {

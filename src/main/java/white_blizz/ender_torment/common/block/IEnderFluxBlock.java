@@ -4,7 +4,7 @@ import net.minecraft.block.Block;
 import net.minecraft.block.material.Material;
 import net.minecraftforge.common.ToolType;
 
-public interface IEnderFluxBlock {
+public interface IEnderFluxBlock extends IETBlock {
 	static Block.Properties getDefaultProperties() {
 		return Block.Properties.create(Material.IRON)
 				.harvestTool(ToolType.PICKAXE)

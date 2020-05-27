@@ -1,4 +1,5 @@
 {
+  "block.ender_torment.conduit": "Conduit",
   "block.ender_torment.ender_flux_battery": "Ender Flux Battery",
   "block.ender_torment.ender_flux_collector": "Ender Flux Collector",
   "block.ender_torment.ender_flux_converter": "Ender Flux Converter",
@@ -7,6 +8,7 @@
   "enchantment.ender_torment.ender_disperser": "Ender Disperser",
   "enchantment.ender_torment.ender_heat": "Ender Heat",
   "enchantment.ender_torment.ender_quantum_chamber": "Ender Quantum Chamber",
+  "item.ender_torment.conduit": "Conduit",
   "item.ender_torment.ender_flux_capacitor": "Ender Flux Capacitor",
   "item.ender_torment.ender_gun": "Ender Gun",
   "item.ender_torment.flux_vision": "Flux Vision",

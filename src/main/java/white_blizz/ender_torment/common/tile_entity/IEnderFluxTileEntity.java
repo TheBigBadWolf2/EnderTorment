@@ -1,3 +1,3 @@
 package white_blizz.ender_torment.common.tile_entity;
 
-public interface IEnderFluxTileEntity {}
+public interface IEnderFluxTileEntity extends IETTileEntity {}

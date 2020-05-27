@@ -4,8 +4,7 @@ import com.mojang.blaze3d.matrix.MatrixStack;
 import com.mojang.blaze3d.systems.RenderSystem;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.entity.player.ClientPlayerEntity;
-import net.minecraft.client.shader.*;
-import net.minecraft.client.util.JSONException;
+import net.minecraft.client.shader.Framebuffer;
 import net.minecraft.client.world.ClientWorld;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.monster.IMob;
@@ -21,19 +20,20 @@ import net.minecraftforge.api.distmarker.OnlyIn;
 import net.minecraftforge.client.event.RenderWorldLastEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
-import net.minecraftforge.fml.common.ObfuscationReflectionHelper;
 import white_blizz.ender_torment.EnderTorment;
+import white_blizz.ender_torment.client.shader.*;
 import white_blizz.ender_torment.common.potion.ETEffects;
 import white_blizz.ender_torment.utils.Ref;
 
 import javax.annotation.Nullable;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.function.Predicate;
 import java.util.stream.StreamSupport;
 
-@OnlyIn(Dist.CLIENT)
 @Mod.EventBusSubscriber(value = Dist.CLIENT, modid = Ref.MOD_ID, bus = Mod.EventBusSubscriber.Bus.FORGE)
 public final class ShaderHandler implements AutoCloseable {
 	private static ShaderHandler INSTANCE;
@@ -97,23 +97,29 @@ public final class ShaderHandler implements AutoCloseable {
 	}
 
 	private static ResourceLocation getPost(String name) {
-		return Ref.loc("shaders/post/", name, "json");
+		return Ref.MOD.rl.loc("shaders/post/", name, "json");
 	}
-	private static ShaderGroup newShaderGroup(Minecraft mc, Framebuffer in, String post) throws IOException {
-		return new ShaderGroup(
+
+
+	private static ETShaderGroup newShaderGroup(Minecraft mc, Framebuffer in, String post) throws IOException {
+		return newShaderGroup(mc, in, post, new HashMap<>());
+	}
+	private static ETShaderGroup newShaderGroup(Minecraft mc, Framebuffer in, String post, Map<String, Framebuffer> overrides) throws IOException {
+		return new ETShaderGroup(
 				mc.textureManager,
 				mc.getResourceManager(),
-				in, getPost(post)
+				in, getPost(post),
+				overrides
 		);
 	}
 
 
-	private static Framebuffer addAndGetFrameBuffer(ShaderGroup shaderGroup, String name, int width, int height) {
+	private static Framebuffer addAndGetFrameBuffer(ETShaderGroup shaderGroup, String name, int width, int height) {
 		shaderGroup.addFramebuffer(name, width, height);
 		return shaderGroup.getFramebufferRaw(name);
 	}
 
-	private final ShaderGroup grayer;
+	private final ETShaderGroup grayer;
 
 	public interface ILayerInfo {
 		boolean testEntity(Entity entity);
@@ -124,7 +130,7 @@ public final class ShaderHandler implements AutoCloseable {
 
 	@SuppressWarnings("PointlessBitwiseExpression") //It looks good...
 	private static class Layer implements AutoCloseable {
-		private final ShaderGroup outlineLayer;
+		private final ETShaderGroup outlineLayer;
 		private final Framebuffer buff, buffOut;
 		private final Predicate<Entity> entityPred;
 		//private final BiPredicate<World, BlockPos> blockPred;
@@ -154,20 +160,8 @@ public final class ShaderHandler implements AutoCloseable {
 			Shader layerer = outlineLayer.addShader(Ref.locStr("layer"), buffIn, buffOut);
 			layerer.addAuxFramebuffer("Layer2", frameB, width, height);*/
 			this(mc, buffIn, entityPred, "outline_layer");
-			List<Shader> list = ObfuscationReflectionHelper.getPrivateValue(
-					ShaderGroup.class, outlineLayer,
-					"field_148031_d");
-			if (list != null)
-				list.stream().filter(shader -> {
-					final ShaderInstance manager = shader.getShaderManager();
-					final String name = ObfuscationReflectionHelper.getPrivateValue(
-							ShaderInstance.class,
-							manager,
-							"field_216556_l"
-					);
-					return Ref.locStr("outline").equals(name);
-				}).findFirst().ifPresent(shader -> {
-					ShaderUniform outlineColor = shader.getShaderManager().func_216539_a("OutlineColor");
+			outlineLayer.listShaders.stream().filter(shader -> shader.getShaderManager().getName().equals(Ref.MOD.str.loc("outline"))).findFirst().ifPresent(shader -> {
+					ETShaderUniform outlineColor = shader.getShaderManager().getUniform("OutlineColor");
 					if (outlineColor != null) {
 						int r = (color >> 16) & 255;
 						int g = (color >>  8) & 255;
@@ -198,14 +192,7 @@ public final class ShaderHandler implements AutoCloseable {
 		Minecraft mc = Minecraft.getInstance();
 		int w = mc.getMainWindow().getFramebufferWidth();
 		int h = mc.getMainWindow().getFramebufferHeight();
-		grayer = newShaderGroup(
-				mc,
-				mc.getFramebuffer(),
-				"grey"
-		);
-		Shader combiner = grayer.addShader(Ref.locStr("combine"),
-				grayer.getFramebufferRaw("grey"),
-				mc.getFramebuffer());
+
 
 		/*outlineLayer = new ShaderGroup(
 				mc.textureManager,
@@ -240,7 +227,22 @@ public final class ShaderHandler implements AutoCloseable {
 
 		fallBack = fallBackColor != null ? newLayer.apply(ent -> true, /*(wd, p) -> true,*/ fallBackColor) : null;
 
-		combiner.addAuxFramebuffer("Outlines", newLayer.in, w, h);
+		Map<String, Framebuffer> map = new HashMap<>();
+		map.put("outlines", newLayer.in);
+
+		grayer = newShaderGroup(
+				mc,
+				mc.getFramebuffer(),
+				"compile",
+				map
+		);
+
+
+		/*ETShader combiner = grayer.addShader(Ref.locStr("combine"),
+				grayer.getFramebufferRaw("grey"),
+				mc.getFramebuffer());
+
+		combiner.addAuxFramebuffer("Outlines", newLayer.in, w, h);*/
 		grayer.createBindFramebuffers(w, h);
 		/*compile = new ShaderGroup(
 				mc.textureManager,
@@ -265,6 +267,7 @@ public final class ShaderHandler implements AutoCloseable {
 
 			layers.forEach(layer -> layer.outlineLayer.createBindFramebuffers(w, h));
 			if (fallBack != null) fallBack.outlineLayer.createBindFramebuffers(w, h);
+			grayer.createBindFramebuffers(w, h);
 
 			/*if (false) {
 				int xzRange = 16;
@@ -353,12 +356,11 @@ public final class ShaderHandler implements AutoCloseable {
 
 			//combiner.setProjectionMatrix(matrix4f);
 			//render(combiner, partialTicks);
-			grayer.createBindFramebuffers(w, h);
 			render(grayer, partialTicks);
 		}
 	}
 
-	private void render(Shader shader, float partialTicks) {
+	private void render(ETShader shader, float partialTicks) {
 		RenderSystem.disableBlend();
 		RenderSystem.disableDepthTest();
 		RenderSystem.disableAlphaTest();
@@ -369,7 +371,7 @@ public final class ShaderHandler implements AutoCloseable {
 		RenderSystem.matrixMode(5889);
 	}
 
-	private void render(ShaderGroup group, float partialTicks) {
+	private void render(ETShaderGroup group, float partialTicks) {
 		RenderSystem.disableBlend();
 		RenderSystem.disableDepthTest();
 		RenderSystem.disableAlphaTest();

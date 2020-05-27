@@ -35,17 +35,17 @@ import java.util.List;
 @MethodsReturnNonnullByDefault
 public class EnderFluxConverterTE extends ETTileEntity implements ITickableTileEntity {
 	public EnderFluxConverterTE() {
-		super(ETBlocks.ENDER_FLUX_CONVERTER_TYPE.get());
+		super(ETBlocks.ENDER_FLUX_CONVERTER_TYPE);
 		enderFluxStorage.setEnchantmentList(enchantable);
 	}
 
 	@Override
 	public void tick() {
-		for (Direction direction : Direction.values()) {
+		/*for (Direction direction : Direction.values()) {
 			ETUtils.mapToLazy(ETUtils.getTileEntity(getWorld(), getPos().offset(direction)),
 					te -> te.getCapability(CapabilityEnderFlux.ENDER_FLUX)).ifPresent(storage ->
 					TransUtils.transfer(storage, enderFluxStorage));
-		}
+		}*/
 		enderFluxStorage.tick();
 		for (Direction direction : Direction.values()) {
 			ETUtils.mapToLazy(ETUtils.getTileEntity(getWorld(), getPos().offset(direction)),

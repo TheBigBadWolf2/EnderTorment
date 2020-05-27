@@ -4,6 +4,11 @@
   ],
   "passes": [
     {
+      "name": "ender_torment:grey",
+      "intarget": "minecraft:main",
+      "outtarget": "grey"
+    },
+    {
       "name": "ender_torment:combine",
       "intarget": "grey",
       "auxtargets": [

@@ -35,15 +35,14 @@ import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 import java.util.stream.Stream;
 
-@OnlyIn(Dist.CLIENT)
 @Mod.EventBusSubscriber(value = Dist.CLIENT, modid = Ref.MOD_ID, bus = Mod.EventBusSubscriber.Bus.FORGE)
 public class ClientHandler {
-	private static final ResourceLocation EMPTY_SHADER_LOC = Ref.loc(
+	private static final ResourceLocation EMPTY_SHADER_LOC = Ref.MOD.rl.loc(
 			"shaders/post/",
 			"empty",
 			"json"
 	);
-	private static final ResourceLocation SHADER_LOC = Ref.loc(
+	private static final ResourceLocation SHADER_LOC = Ref.MOD.rl.loc(
 			"shaders/post/",
 			"flux_vision",
 			"json"
@@ -168,7 +167,7 @@ public class ClientHandler {
 	}
 
 	private static void specialRenders(MatrixStack matrixStack, float partialTicks) {
-		doSpecialRender(Ref.locStr("main"), (mc, world) -> {
+		doSpecialRender(Ref.MOD.str.loc("main"), (mc, world) -> {
 			Vec3d cam = mc.gameRenderer.getActiveRenderInfo().getProjectedView();
 			double cX = cam.getX();
 			double cY = cam.getY();

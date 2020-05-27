@@ -13,10 +13,9 @@ import net.minecraftforge.fml.client.gui.GuiUtils;
 import white_blizz.ender_torment.common.container.EnderFluxBatteryContainer;
 import white_blizz.ender_torment.utils.Ref;
 
-@OnlyIn(Dist.CLIENT)
 @MethodsReturnNonnullByDefault
 public class EnderFluxBatteryScreen extends ContainerScreen<EnderFluxBatteryContainer> {
-	private static final ResourceLocation BACKGROUND_TEXTURE = Ref.loc(
+	private static final ResourceLocation BACKGROUND_TEXTURE = Ref.MOD.rl.loc(
 			"textures/gui/container/",
 			"widget",
 			"png"

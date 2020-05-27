@@ -16,7 +16,7 @@ import javax.annotation.ParametersAreNonnullByDefault;
 public final class JEIHandler implements IModPlugin {
 	@Override
 	public ResourceLocation getPluginUid() {
-		return Ref.loc("default");
+		return Ref.MOD.rl.loc("default");
 	}
 
 	@Override

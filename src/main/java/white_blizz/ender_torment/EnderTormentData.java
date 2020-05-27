@@ -132,15 +132,37 @@ public final class EnderTormentData {
 		@Override
 		protected void registerModels() {
 			ETItems.getItems().forEach(item -> {
-				if (item.get() instanceof BlockItem) blockItem(item.getId().getPath());
-				else if (item.get() instanceof EnderFluxCapacitorItem) {
-					withExistingParent(item.getId().getPath(), "redstone");
-				} else withExistingParent(item.getId().getPath(), "stick");
+				String name = item.getId().getPath();
+				if (item.get() instanceof BlockItem) blockItem(name);
+				//else if (item.get() instanceof EnderFluxCapacitorItem) withExistingParent(item.getId().getPath(), "redstone");
+				else try { this.item(name); }
+				catch (IllegalArgumentException ignored) { this.wip(name); }
+				//withExistingParent(item.getId().getPath(), "stick");
 			});
 		}
 
-		private void blockItem(String name) {
-			withExistingParent(name, modLoc(BLOCK_FOLDER+"/"+name));
+		private ItemModelBuilder blockItem(String name) {
+			return withExistingParent(name, modLoc(BLOCK_FOLDER + "/" + name));
+		}
+
+		private void item(String name) {
+			this.singleTexture(
+					name,
+					Ref.MC.rl.loc("item/generated"),
+					"layer0",
+					Ref.MOD.rl.loc(ITEM_FOLDER, name)
+
+			);
+		}
+
+		private void wip(String name) {
+			this.singleTexture(
+					name,
+					Ref.MC.rl.loc("item/generated"),
+					"layer0",
+					Ref.MOD.rl.loc("wip")
+
+			);
 		}
 
 		@Override
@@ -157,18 +179,25 @@ public final class EnderTormentData {
 
 		@Override
 		protected void registerStatesAndModels() {
-			simpleBlock(ETBlocks.ENDER_FLUX_COLLECTOR, "piston_top");
-			simpleBlock(ETBlocks.ENDER_FLUX_CONVERTER, "piston_top_sticky");
-			simpleBlock(ETBlocks.ENDER_FLUX_BATTERY, "piston_bottom");
+			simpleBlock(ETBlocks.ENDER_FLUX_COLLECTOR.getRaw(), "piston_top");
+			simpleBlock(ETBlocks.ENDER_FLUX_CONVERTER.getRaw(), "piston_top_sticky");
+			simpleBlock(ETBlocks.ENDER_FLUX_BATTERY.getRaw(), "piston_bottom");
+			terBlock(ETBlocks.CONDUIT);
 		}
 
+		@SuppressWarnings("unchecked")
+		private void terBlock(RegistryObject<? extends Block> block) {
+			BlockModelBuilder builder = models().getBuilder(Objects.requireNonNull(block.get().getRegistryName()).getPath())
+					.texture("particle", "wip");
+			super.simpleBlock(block.get(), builder);
+		}
 
-		private void simpleBlock(Supplier<? extends Block> block, String texture) {
+		@SuppressWarnings("unchecked")
+		private void simpleBlock(RegistryObject<? extends Block> block, String texture) {
 			BlockModelBuilder cubeAll = models().cubeAll(
-					Objects.requireNonNull(block.get().getRegistryName()).getPath(),
-					new ResourceLocation(ModelProvider.BLOCK_FOLDER + "/" + texture)
+					block.getId().getPath(),
+					Ref.MC.rl.loc(ModelProvider.BLOCK_FOLDER, texture)
 			);
-
 			simpleBlock(block.get(), cubeAll);
 		}
 	}
@@ -218,8 +247,6 @@ public final class EnderTormentData {
 						);
 			}
 
-
-
 			@Override
 			protected void addTables() {
 				registerLootTable(ETBlocks.ENDER_FLUX_COLLECTOR.get(), this.withNBTs(
@@ -233,6 +260,7 @@ public final class EnderTormentData {
 				registerLootTable(ETBlocks.ENDER_FLUX_BATTERY.get(), this.withNBTs(
 						new Mapping("items")
 				));
+				registerLootTable(ETBlocks.CONDUIT.get(), new LootTable.Builder());
 			}
 
 			@Override

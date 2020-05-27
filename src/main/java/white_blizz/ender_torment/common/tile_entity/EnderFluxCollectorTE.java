@@ -58,7 +58,7 @@ public class EnderFluxCollectorTE extends ETTileEntity implements ITickableTileE
 	}
 
 	public EnderFluxCollectorTE() {
-		super(ETBlocks.ENDER_FLUX_COLLECTOR_TYPE.get());
+		super(ETBlocks.ENDER_FLUX_COLLECTOR_TYPE);
 		enderFluxStorage.setEnchantmentList(enchantable);
 	}
 

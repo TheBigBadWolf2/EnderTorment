@@ -5,6 +5,8 @@ import net.minecraft.potion.Effect;
 import net.minecraft.potion.EffectInstance;
 import net.minecraft.potion.Potion;
 import net.minecraft.util.text.TextFormatting;
+import net.minecraftforge.api.distmarker.Dist;
+import net.minecraftforge.api.distmarker.OnlyIn;
 import net.minecraftforge.event.entity.player.ItemTooltipEvent;
 import net.minecraftforge.eventbus.api.IEventBus;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
@@ -47,7 +49,7 @@ public class ETEffects extends ETDeferredRegisterHandler {
 
 	public ETEffects(IEventBus bus) { super(bus, EFFECTS, POTIONS); }
 
-	@SubscribeEvent
+	@SubscribeEvent @OnlyIn(Dist.CLIENT) //ToDo: Move to client side handler...
 	public void tooltip(ItemTooltipEvent event) {
 		PlayerEntity player = event.getPlayer();
 		if (player == null) return;

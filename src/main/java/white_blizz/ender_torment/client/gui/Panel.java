@@ -16,10 +16,9 @@ import white_blizz.ender_torment.utils.Ref;
 import javax.annotation.ParametersAreNonnullByDefault;
 import java.util.Arrays;
 
-@OnlyIn(Dist.CLIENT)
 @ParametersAreNonnullByDefault
 public class Panel extends Widget {
-	private static final ResourceLocation WIDGET_LOC = Ref.loc(
+	private static final ResourceLocation WIDGET_LOC = Ref.MOD.rl.loc(
 			"textures/gui/container/",
 			"widget",
 			"png"

@@ -25,15 +25,20 @@ import java.util.function.Supplier;
 @ParametersAreNonnullByDefault
 @MethodsReturnNonnullByDefault
 public abstract class ETTileEntity extends TileEntity implements IETTileEntity {
-	public ETTileEntity(TileEntityType<?> type) { super(type); }
+	public <T extends ETTileEntity> ETTileEntity(Supplier<TileEntityType<T>> type) { super(type.get()); }
+
+	private boolean isDirty = false;
 
 	@Override
 	public void markDirty() {
 		if (world != null && !world.isRemote) {
-			super.markDirty();
-			world.markAndNotifyBlock(getPos(), null,
-					getBlockState(), getBlockState(),
-					Constants.BlockFlags.DEFAULT);
+			if (!isDirty) {
+				super.markDirty();
+				world.markAndNotifyBlock(getPos(), null,
+						getBlockState(), getBlockState(),
+						Constants.BlockFlags.DEFAULT);
+				isDirty = true;
+			}
 		}
 	}
 
@@ -45,6 +50,7 @@ public abstract class ETTileEntity extends TileEntity implements IETTileEntity {
 
 	@Override
 	public final CompoundNBT write(CompoundNBT compound) {
+		isDirty = false;
 		compound = super.write(compound);
 		extraWrite(compound);
 		return compound;

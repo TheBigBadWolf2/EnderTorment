@@ -23,7 +23,7 @@ public class EnderFluxStorage implements IEnderFluxStorage {
 	protected double decay, decayed;
 
 	public EnderFluxStorage(int capacity) {
-		this(capacity, capacity, capacity, 0, DEFAULT_DECAY);
+		this(capacity, capacity, capacity, 0, IEnderFluxStorage.getDefaultDecayRate());
 	}
 
 	public EnderFluxStorage(int capacity, double decay) {
@@ -31,7 +31,7 @@ public class EnderFluxStorage implements IEnderFluxStorage {
 	}
 
 	public EnderFluxStorage(int capacity, int maxTransfer) {
-		this(capacity, maxTransfer, maxTransfer, 0, DEFAULT_DECAY);
+		this(capacity, maxTransfer, maxTransfer, 0, IEnderFluxStorage.getDefaultDecayRate());
 	}
 
 	public EnderFluxStorage(int capacity, int maxTransfer, double decay) {
@@ -39,7 +39,7 @@ public class EnderFluxStorage implements IEnderFluxStorage {
 	}
 
 	public EnderFluxStorage(int capacity, int maxReceive, int maxExtract) {
-		this(capacity, maxReceive, maxExtract, 0, DEFAULT_DECAY);
+		this(capacity, maxReceive, maxExtract, 0, IEnderFluxStorage.getDefaultDecayRate());
 	}
 
 	public EnderFluxStorage(int capacity, int maxReceive, int maxExtract, double decay) {
@@ -47,7 +47,7 @@ public class EnderFluxStorage implements IEnderFluxStorage {
 	}
 
 	public EnderFluxStorage(int capacity, int maxReceive, int maxExtract, int flux) {
-		this(capacity, maxReceive, maxExtract, flux, DEFAULT_DECAY);
+		this(capacity, maxReceive, maxExtract, flux, IEnderFluxStorage.getDefaultDecayRate());
 	}
 
 	public EnderFluxStorage(int capacity, int maxReceive, int maxExtract, int flux, double decay) {

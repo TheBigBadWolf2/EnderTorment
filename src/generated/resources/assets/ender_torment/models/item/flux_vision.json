@@ -1,3 +1,6 @@
 {
-  "parent": "item/stick"
+  "parent": "item/generated",
+  "textures": {
+    "layer0": "ender_torment:wip"
+  }
 }

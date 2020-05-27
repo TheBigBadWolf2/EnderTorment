@@ -12,10 +12,7 @@ import net.minecraftforge.registries.IForgeRegistry;
 import white_blizz.ender_torment.common.item.ETBlockItem;
 import white_blizz.ender_torment.common.item.ETEnchantableBlockItem;
 import white_blizz.ender_torment.common.item.ETItems;
-import white_blizz.ender_torment.common.tile_entity.EnderFluxBatteryTE;
-import white_blizz.ender_torment.common.tile_entity.EnderFluxCollectorTE;
-import white_blizz.ender_torment.common.tile_entity.EnderFluxConverterTE;
-import white_blizz.ender_torment.common.tile_entity.IETTileEntity;
+import white_blizz.ender_torment.common.tile_entity.*;
 import white_blizz.ender_torment.utils.ETDeferredRegisterHandler;
 
 import java.util.Arrays;
@@ -29,7 +26,7 @@ public final class ETBlocks extends ETDeferredRegisterHandler {
 
 	private static final TEReg TILE_ENTITIES = New(ForgeRegistries.TILE_ENTITIES, TEReg::new);
 
-	public static final class BlockItemObject<TBlock extends Block, TItem extends Item> extends ETRegistryObject<TBlock> {
+	public static final class BlockItemObject<TBlock extends Block & IETBlock, TItem extends Item> extends ETRegistryObject<TBlock> {
 		private final RegistryObject<TItem> item;
 
 		private BlockItemObject(RegistryObject<TBlock> block, RegistryObject<TItem> item) {
@@ -46,7 +43,7 @@ public final class ETBlocks extends ETDeferredRegisterHandler {
 			this.items = items;
 		}
 
-		private <TBlock extends Block, TItem extends Item> BlockItemObject<TBlock, TItem> reg(
+		private <TBlock extends Block & IETBlock, TItem extends Item> BlockItemObject<TBlock, TItem> reg(
 				String name,
 				Supplier<TBlock> blockFactory,
 				BiFunction<Supplier<? extends Block>, Item.Properties, TItem> itemFactory,
@@ -81,10 +78,13 @@ public final class ETBlocks extends ETDeferredRegisterHandler {
 			BLOCKS.reg("ender_flux_converter", EnderFluxConverterBlock::new, ETEnchantableBlockItem::new, ETBlocks::getDefault);
 	public static final BlockItemObject<EnderFluxBatteryBlock, ETBlockItem> ENDER_FLUX_BATTERY =
 			BLOCKS.reg("ender_flux_battery", EnderFluxBatteryBlock::new, ETBlockItem::new, ETBlocks::getDefault);
+	public static final RegistryObject<ConduitBlock> CONDUIT = BLOCKS.register("conduit" , ConduitBlock::new);
+
 
 	public static final RegistryObject<TileEntityType<EnderFluxCollectorTE>> ENDER_FLUX_COLLECTOR_TYPE = TILE_ENTITIES.register("ender_flux_collector", EnderFluxCollectorTE::new, ENDER_FLUX_COLLECTOR);
 	public static final RegistryObject<TileEntityType<EnderFluxConverterTE>> ENDER_FLUX_CONVERTER_TYPE = TILE_ENTITIES.register("ender_flux_converter", EnderFluxConverterTE::new, ENDER_FLUX_CONVERTER);
 	public static final RegistryObject<TileEntityType<EnderFluxBatteryTE>> ENDER_FLUX_BATTERY_TYPE = TILE_ENTITIES.register("ender_flux_battery", EnderFluxBatteryTE::new, ENDER_FLUX_BATTERY);
+	public static final RegistryObject<TileEntityType<ConduitTE>> CONDUIT_TYPE = TILE_ENTITIES.register("conduit", ConduitTE::new, CONDUIT);
 
 	public ETBlocks(IEventBus bus) { super(bus, BLOCKS, TILE_ENTITIES); }
 
