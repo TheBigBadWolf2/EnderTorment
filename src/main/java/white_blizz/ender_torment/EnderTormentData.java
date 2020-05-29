@@ -6,6 +6,7 @@ import mcp.MethodsReturnNonnullByDefault;
 import net.minecraft.block.Block;
 import net.minecraft.data.DataGenerator;
 import net.minecraft.data.IDataProvider;
+import net.minecraft.data.ItemTagsProvider;
 import net.minecraft.data.LootTableProvider;
 import net.minecraft.data.loot.BlockLootTables;
 import net.minecraft.enchantment.Enchantment;
@@ -21,6 +22,7 @@ import net.minecraftforge.common.data.LanguageProvider;
 import net.minecraftforge.fml.RegistryObject;
 import net.minecraftforge.fml.event.lifecycle.GatherDataEvent;
 import net.minecraftforge.registries.IForgeRegistryEntry;
+import white_blizz.ender_torment.common.ETTags;
 import white_blizz.ender_torment.common.block.ETBlocks;
 import white_blizz.ender_torment.common.enchantment.ETEnchantments;
 import white_blizz.ender_torment.common.item.ETItems;
@@ -67,6 +69,7 @@ public final class EnderTormentData {
 
 		if (event.includeServer()) {
 			add(gen, LootTables::new);
+			add(gen, ItemTags::new);
 		}
 	}
 
@@ -270,6 +273,15 @@ public final class EnderTormentData {
 						.map(RegistryObject::get)
 						.collect(Collectors.toList());
 			}
+		}
+	}
+
+	private static class ItemTags extends ItemTagsProvider {
+		public ItemTags(DataGenerator generatorIn) { super(generatorIn); }
+
+		@Override
+		protected void registerTags() {
+			getBuilder(ETTags.Items.WRENCH).add(ETItems.WRENCH.get());
 		}
 	}
 }

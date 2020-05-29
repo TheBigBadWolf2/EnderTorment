@@ -22,6 +22,12 @@ public class ETRegistry {
 		return sort - (size / 2F) + 0.5F;
 	}
 
+	public static double getSortValue(ConduitType<?> type, double scale) {
+		int sort = SORT.getInt(type);
+		int size = SORT.size();
+		return (sort - (size / 2D) + 0.5D) * scale;
+	}
+
 	public static void register(RegistryEvent.NewRegistry evt) {
 		CONDUIT_TYPE = new RegistryBuilder()
 				.setType(ConduitType.class)

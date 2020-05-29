@@ -1,7 +1,5 @@
 package white_blizz.ender_torment;
 
-import com.google.common.collect.ImmutableList;
-import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.eventbus.api.IEventBus;
 import net.minecraftforge.fml.DistExecutor;
@@ -34,8 +32,6 @@ import white_blizz.ender_torment.utils.ISidedConfig;
 import white_blizz.ender_torment.utils.Ref;
 
 import java.util.Arrays;
-import java.util.List;
-import java.util.function.Function;
 
 @Mod(Ref.MOD_ID)
 public final class EnderTorment {

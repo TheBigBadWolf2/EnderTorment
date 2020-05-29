@@ -2,6 +2,7 @@ package white_blizz.ender_torment.client.render;
 
 import com.mojang.blaze3d.matrix.MatrixStack;
 import com.mojang.blaze3d.vertex.IVertexBuilder;
+import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.FontRenderer;
 import net.minecraft.client.renderer.*;
 import net.minecraft.client.renderer.tileentity.TileEntityRenderer;
@@ -9,6 +10,7 @@ import net.minecraft.client.renderer.tileentity.TileEntityRendererDispatcher;
 import net.minecraft.util.Direction;
 import net.minecraft.util.math.Vec3d;
 import net.minecraft.util.math.Vec3i;
+import white_blizz.ender_torment.client.ClientConfig;
 import white_blizz.ender_torment.common.ETRegistry;
 import white_blizz.ender_torment.common.conduit.ConduitType;
 import white_blizz.ender_torment.common.conduit.Link;
@@ -21,8 +23,8 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 
-import static net.minecraft.client.renderer.RenderType.getOutline;
 import static white_blizz.ender_torment.client.render.ETRenderType.CONDUIT;
+import static white_blizz.ender_torment.client.render.ETRenderType.OVERLAY_LINES;
 
 @SuppressWarnings("PointlessBitwiseExpression")
 @ParametersAreNonnullByDefault
@@ -243,7 +245,7 @@ public class ConduitRenderer extends TileEntityRenderer<ConduitTE> {
 		stack.scale(0.5F, 0.5F, 0.5F);
 
 		Map<ConduitType<?>, Link<?>> links = te.getLinks();
-		int size = links.size();
+		//int size = links.size();
 		//AtomicReference<Float> offset = new AtomicReference<>((size / 2F) - 0.5F);
 		class IdColor {
 			final String id;
@@ -257,10 +259,11 @@ public class ConduitRenderer extends TileEntityRenderer<ConduitTE> {
 			}
 		}
 		List<IdColor> ids = new ArrayList<>();
+		final IVertexBuilder finalBuf = buf;
 		links.forEach((type, link) -> {
 			stack.push();
 			ids.add(new IdColor(link.getNetworkID().toString(), type.color,
-					add(buf, stack, ETRegistry.getSortValue(type), type.color, link.getConnections().keySet())));
+					add(finalBuf, stack, ETRegistry.getSortValue(type), type.color, link.getConnections().keySet())));
 			//offset.updateAndGet(v -> v + 1);
 			stack.pop();
 		});
@@ -295,12 +298,35 @@ public class ConduitRenderer extends TileEntityRenderer<ConduitTE> {
 //		buf.pos(matrix, -1, 0, 1).color(255, 255, 255, 255).endVertex();
 //		//buf.pos(matrix, 0, 0, 0).color(255, 255, 255, 255).endVertex();
 
+		if (ClientConfig.get().shouldShowLines()) {
+			buf = typeBuf.getBuffer(OVERLAY_LINES);
+			Matrix4f matrix = stack.getLast().getMatrix();
+
+			for (int x = -1; x <= 1; x += 2)
+				for (int z = -1; z <= 1; z += 2)
+					for (int y = -1; y <= 1; y += 2)
+						buf.pos(matrix, x, y, z).color(0, 255, 0, 255).endVertex();
+
+			for (int x = -1; x <= 1; x += 2)
+				for (int y = -1; y <= 1; y += 2)
+					for (int z = -1; z <= 1; z += 2)
+						buf.pos(matrix, x, y, z).color(0, 0, 255, 255).endVertex();
+
+			for (int z = -1; z <= 1; z += 2)
+				for (int y = -1; y <= 1; y += 2)
+					for (int x = -1; x <= 1; x += 2)
+						buf.pos(matrix, x, y, z).color(255, 0, 0, 255).endVertex();
+		}
+
 		float scale = 0.125F / 5F;
 
 		//final int[] y = {0};
 		FontRenderer fontRenderer = renderDispatcher.getFontRenderer();
 		//RenderSystem.disableDepthTest();
 		if (ids.isEmpty()) {
+			stack.push();
+			stack.scale(-scale, -scale, scale);
+			stack.rotate(Vector3f.YP.rotationDegrees(renderDispatcher.renderInfo.getYaw()));
 			String s = "ERROR";
 			float x = (float) (-fontRenderer.getStringWidth(s) / 2);
 			fontRenderer.renderString(
@@ -315,6 +341,7 @@ public class ConduitRenderer extends TileEntityRenderer<ConduitTE> {
 					0xFF000000,
 					combinedLight
 			);
+			stack.pop();
 		} else {
 			ids.forEach((id) -> {
 				stack.push();

@@ -74,7 +74,7 @@ public final class ETItems extends ETDeferredRegisterHandler {
 	public static final RegistryObject<EnderFluxCapacitorItem> ENDER_FLUX_CAPACITOR = ITEMS.register("ender_flux_capacitor", EnderFluxCapacitorItem::new);
 	public static final RegistryObject<FluxVisionItem> FLUX_VISION = ITEMS.register("flux_vision", FluxVisionItem::new);
 	public static final RegistryObject<BaseConduitItem> CONDUIT = ITEMS.register("conduit", BaseConduitItem::new);
-
+	public static final RegistryObject<WrenchItem> WRENCH = ITEMS.register("wrench", WrenchItem::new);
 
 	public ETItems(IEventBus bus) { super(bus, ITEMS); }
 

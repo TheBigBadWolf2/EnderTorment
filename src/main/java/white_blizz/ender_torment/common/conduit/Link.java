@@ -18,15 +18,14 @@ import white_blizz.ender_torment.utils.ETNBTUtil;
 import javax.annotation.Nullable;
 import javax.annotation.ParametersAreNonnullByDefault;
 import java.util.*;
-import java.util.function.Function;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 @MethodsReturnNonnullByDefault
 @ParametersAreNonnullByDefault
 @SuppressWarnings({"UnusedReturnValue"})
-public abstract class Link<Cap> implements INBTSerializable<CompoundNBT> {
+public abstract class Link<Cap> extends NetworkPart<Cap> implements INBTSerializable<CompoundNBT> {
 	private static final UUID DEFAULT_ID = new UUID(0L, 0L);
 
-	//ToDo: interdimensional connections?
 	static <Cap> boolean link(Link<Cap> a, Link<Cap> b) {
 		if (a.dim != b.dim) {
 			if (!a.isInterdimensional() || !b.isInterdimensional()) return false;
@@ -40,8 +39,8 @@ public abstract class Link<Cap> implements INBTSerializable<CompoundNBT> {
 			return a.handleLongConnection(b);
 		}
 		Direction dirB = dirA.getOpposite();
-		if (a.connections.get(dirA) != null) return false;
-		if (b.connections.get(dirB) != null) return false;
+		if (a.connections.get(dirA).isPresent()) return false;
+		if (b.connections.get(dirB).isPresent()) return false;
 		a.link(dirA, b);
 		b.link(dirB, a);
 		return true;
@@ -60,103 +59,62 @@ public abstract class Link<Cap> implements INBTSerializable<CompoundNBT> {
 			throw new IllegalStateException("Bad long distance relationship!");
 		}
 		Direction dirB = dirA.getOpposite();
-		Link<Cap>.Connection connection = a.connections.get(dirA);
-		if (connection == null || connection.getLink() != b) return false;
-		connection = b.connections.get(dirB);
-		if (connection == null || connection.getLink() != a) throw new IllegalStateException("Link \"a\" was connected to Link \"b\", but Link \"b\" was not connected to Link \"a\"!");
+		if (a.connections.get(dirA).flatMap(Connection::getPart).map(o -> o != b).orElse(true)) return false;
+		if (b.connections.get(dirB).flatMap(Connection::getPart).map(o -> o != a).orElse(true)) throw new IllegalStateException("Link \"a\" was connected to Link \"b\", but Link \"b\" was not connected to Link \"a\"!");
 		a.unlink(dirA);
 		b.unlink(dirB);
 		return true;
 	}
 
+	private static <Cap> boolean tryForceLink(Link<Cap> a, Direction dir, Link<Cap> b) {
+		if (a.connections.get(dir).isPresent()) return false;
+		if (b.connections.get(dir.getOpposite()).isPresent()) return false;
+		a.link(dir, b);
+		b.link(dir.getOpposite(), a);
+		return true;
+	}
+
+	private static <Cap> boolean tryForceUnlink(Link<Cap> a, Direction dir, Link<Cap> b) {
+		if (a.connections.get(dir).flatMap(Connection::getPart).map(o -> o != b).orElse(true)) return false;
+		if (b.connections.get(dir.getOpposite()).flatMap(Connection::getPart).map(o -> o != a).orElse(true)) throw new IllegalStateException("Link \"a\" was connected to Link \"b\", but Link \"b\" was not connected to Link \"a\"!");
+		a.unlink(dir);
+		b.unlink(dir.getOpposite());
+		return true;
+	}
+
 	static <Cap> void unlink(Link<Cap> link) {
 		for (Direction dir : Direction.values()) {
-			Link<Cap>.Connection connection = link.connections.get(dir);
-			if (connection != null) {
-				Link<Cap> other = connection.getLink();
-				if (other!= null) other.unlink(dir.getOpposite());
-				link.unlink(dir);
-			}
+			link.connections.get(dir).ifPresent(
+					c -> {
+						c.getPart().flatMap(NetworkPart::asLink).ifPresent(l -> l.unlink(dir.getOpposite()));
+						link.unlink(dir);
+					}
+			);
 		}
 	}
 
-	public class Connection {
-		private final Direction direction;
-		protected BlockPos pos;
-		@Nullable protected Link<Cap> link;
 
-		Connection(@Nullable Direction direction) { this.direction = direction; }
 
-		protected void set(@Nullable Link<Cap> other) {
-			link = other;
-			if (other != null) pos = other.pos;
-		}
-
-		private CompoundNBT serializeNBT() {
-			CompoundNBT tag = new CompoundNBT();
-			if (pos != null)
-				tag.put("pos", NBTUtil.writeBlockPos(pos));
-			if (direction != null)
-				tag.putString("dir", direction.getName());
-			return serializeExtraNBT(tag);
-		}
-
-		@Nullable
-		protected Link<Cap> createLink() {
-			return Network.getNetworks(isClient).MAPPED_NETWORKS.get(dim, pos, type);
-		}
-
-		@Nullable
-		public Link<Cap> getLink() {
-			if (link == null) link = createLink();
-			return link;
-		}
-
-		protected CompoundNBT serializeExtraNBT(CompoundNBT tag) { return tag; }
-		protected void deserializeExtraNBT(CompoundNBT tag) {}
-
-		void deserializeNBT(CompoundNBT tag) {
-			pos = ETNBTUtil.COMPOUND.tryGetAs(tag, "pos", NBTUtil::readBlockPos).orElse(null);
-			deserializeExtraNBT(tag);
-		}
-
-	}
-
-	protected final <T extends Connection> T deserializeConnection(CompoundNBT tag, Function<Direction, T> factory) {
-		Direction dir = ETNBTUtil.STRING.tryGetAs(tag, "dir", Direction::byName).orElse(null);
-		T connection = factory.apply(dir);
-		connection.deserializeNBT(tag);
-		return connection;
-	}
-
-	private void link(Direction direction, Link<Cap> other) {
+	private void link(Direction direction, NetworkPart<Cap> other) {
 		connections.compute(direction, (dir, connection) -> {
-			if (connection == null) connection = new Connection(dir);
+			if (connection == null) connection = new Connection<>(this, dir, type, isClient);
 			connection.set(other);
 			return connection;
 		});
+		markDirty();
 	}
 	private void unlink(Direction direction) {
 		connections.remove(direction);
+		markDirty();
 	}
 
-	final HashMap<Direction, Connection> connections = new HashMap<>(6);
-	final DimensionType dim;
-	final BlockPos pos;
-	final ConduitType<Cap> type;
-	final boolean isClient;
-	@Nullable Network network;
-	@Nullable UUID networkID;
-
-	public DimensionType getDim() { return dim; }
-	public BlockPos getPos() { return pos; }
+	final ConnectionMap<Cap> connections = new ConnectionMap<>();
 
 	protected Link(DimensionType dim, BlockPos pos, ConduitType<Cap> type, boolean isClient) {
-		this.dim = dim;
-		this.pos = pos;
-		this.type = type;
-		this.isClient = isClient;
+		super(dim, pos, type, isClient);
 	}
+
+	protected abstract boolean canConnectTo(Direction dir);
 
 	protected boolean isInterdimensional() { return false; }
 	protected boolean isLong() { return false; }
@@ -165,44 +123,45 @@ public abstract class Link<Cap> implements INBTSerializable<CompoundNBT> {
 		return new IllegalStateException("Very bad long distance relationship!");
 	}
 
-	protected boolean handleInterdimensionalConnection(Link<Cap> other) { throw notOverridden(); }
-	protected boolean handleInterdimensionalDisconnection(Link<Cap> other) { throw notOverridden(); }
-	protected boolean handleLongConnection(Link<Cap> other) { throw notOverridden(); }
-	protected boolean handleLongDisconnect(Link<Cap> other) { throw notOverridden(); }
+	protected boolean handleInterdimensionalConnection(NetworkPart<Cap> other) { throw notOverridden(); }
+	protected boolean handleInterdimensionalDisconnection(NetworkPart<Cap> other) { throw notOverridden(); }
 
-	private void addToNetwork(Network network) {
+	protected boolean handleLongConnection(NetworkPart<Cap> other) { throw notOverridden(); }
+	protected boolean handleLongDisconnect(NetworkPart<Cap> other) { throw notOverridden(); }
+
+	private void addToNetwork(Network<Cap> network) {
 		if (network.links.contains(this)) return; //Already added.
 		if (this.network != null) this.network.remove(this);
 		this.setNetwork(network);
 		connections.forEach((dir, connection) -> {
 			if (connection != null) {
-				Link<Cap> other = connection.getLink();
-				if (other != null) {
-					other.addToNetwork(network);
-				}
+				connection.getPart()
+						.flatMap(NetworkPart::asLink)
+						.ifPresent(l -> l.addToNetwork(network));
 			}
 		});
 		markDirty();
 	}
 
-	public final Network getNetwork() {
+	public final Network<Cap> getNetwork() {
 		if (network == null) {
-			Network network;
-			if (networkID == null) network = new Network(type, isClient);
-			else if (Network.getNetworks(isClient).NETWORKS.containsKey(networkID)) network = Network.getNetworks(isClient).NETWORKS.get(networkID);
-			else network = new Network(type, networkID, isClient);
+			Network<Cap> network;
+			if (networkID == null) network = new Network<>(type, isClient);
+			else if (Network.getNetworks(isClient).NETWORKS.containsKey(networkID)) {
+				network = Network.getNetworks(isClient).NETWORKS.get(networkID).asE(type);
+			} else network = new Network<>(type, networkID, isClient);
 			addToNetwork(network);
 		}
 		return network;
 	}
 
 	@Nullable
-	private Network tryGetNetwork() {
+	private Network<Cap> tryGetNetwork() {
 		if (network == null) {
 			if (networkID == null) return null;
 			Network.Networks networks = Network.getNetworks(isClient);
 			if (!networks.NETWORKS.containsKey(networkID)) return null;
-			network = networks.NETWORKS.get(networkID);
+			network = networks.NETWORKS.get(networkID).asE(type);
 			network.links.add(this);
 		}
 		return network;
@@ -214,56 +173,118 @@ public abstract class Link<Cap> implements INBTSerializable<CompoundNBT> {
 		return DEFAULT_ID;
 	}
 
-	public final void setNetwork(Network network) {
+	public final void setNetworkLazily(Network<Cap> network) {
 		this.network = network;
 		this.networkID = network.getId();
 		this.network.links.add(this);
+	}
+
+	public final void setNetwork(Network<Cap> network) {
+		setNetworkLazily(network);
 		updateNetwork();
 	}
 
 	public final void updateNetwork() {
-		Network network = tryGetNetwork();
-		if (network != null) network.updateLink(this);
 		updateConnections();
+		Network<Cap> network = tryGetNetwork();
+		if (network != null) network.updateLink(this);
 	}
 
-	public abstract boolean hasInput();
+	/*public abstract boolean hasInput();
+	public abstract boolean hasBuffer();
 	public abstract boolean hasOutput();
+
+	public abstract List getInputs();
+	public abstract List getBuffers();
+	public abstract List getOutputs();*/
 
 	protected final void updateConnections() {
 		for (Direction direction : Direction.values()) {
-			Link<Cap>.Connection connection = connections.get(direction);
-			if (connection != null) {
-				Link<Cap> other = connection.getLink();
-				if (other != null) {
-					if (!canConnectTo(direction) || !other.canConnectTo(direction.getOpposite())) {
-						unlink(this, other);
-					}
-					continue;
+			AtomicBoolean skip = new AtomicBoolean(false);
+			Optional<NetworkPart<Cap>> part = connections.get(direction)
+					.flatMap(Connection::getPart);
+
+			part.flatMap(NetworkPart::asLink)
+					.filter(link -> {
+						skip.set(true);
+						return !canConnectTo(direction)
+								|| !link.canConnectTo(direction.getOpposite())
+								|| !link.validate();
+					})
+					.ifPresent(link -> tryForceUnlink(this, direction, link));
+			if (skip.get()) continue;
+			part.flatMap(NetworkPart::asNode)
+					.filter(node -> {
+						skip.set(true);
+						return !canConnectTo(direction) || !node.validate();
+					})
+					.ifPresent(node -> {
+						connections.remove(direction);
+						markDirty();
+					});
+			if (skip.get()) continue;
+			Link<Cap> link = Network.getLink(dim, pos.offset(direction), type, isClient);
+			if (link != null) {
+				if (canConnectTo(direction) && link.canConnectTo(direction.getOpposite())) {
+					//link(this, link);
+					tryForceLink(this, direction, link);
 				}
-			}
-			{
-				Link<Cap> link = Network.getLink(dim, pos.offset(direction), type, isClient);
-				if (link != null) {
-					if (canConnectTo(direction) && link.canConnectTo(direction.getOpposite())) {
-						link(this, link);
-					}
-				}
-			}
+			} else if (Connection.canBeNode(dim, pos.offset(direction), type, direction))
+				connections.compute(direction, this::updateNodeConnection);
 		}
 	}
 
-	protected abstract boolean canConnectTo(Direction dir);
+	@Nullable
+	protected Connection<Cap> updateNodeConnection(Direction dir, @Nullable Connection<Cap> connection) {
+		if (!canConnectTo(dir)) return connection;
+		if (connection == null) connection = new Connection<>(this, dir, type, isClient);
+		connection.part = null;
+		connection.dim = dim;
+		connection.pos = pos.offset(dir);
+		markDirty();
+		return connection;
+	}
 
-	public final Map<Direction, Link<Cap>> getConnections() {
-		return ETMaps.newHashMap(true, dir -> {
-			Connection connection = connections.get(dir);
-			if (connection != null) return connection.getLink();
-			return null;
-		}, Direction.values());
+	protected abstract Node<Cap> makeNode(DimensionType dim, BlockPos pos, @Nullable Direction dir, Cap cap);
+
+	public final Map<Direction, Link<Cap>> getLinks() {
+		return ETMaps.newHashMap(true, dir -> connections
+						.get(dir)
+						.flatMap(Connection::getPart)
+						.flatMap(NetworkPart::asLink)
+						.orElse(null),
+				Direction.values());
+	}
+
+	public final Map<Direction, NetworkPart<Cap>> getParts() {
+		return ETMaps.newHashMap(true, dir -> connections
+						.get(dir)
+						.flatMap(Connection::getPart)
+						.orElse(null),
+				Direction.values());
+	}
+
+	public final Map<Direction, Connection<Cap>> getConnections() {
+		return ETMaps.newHashMap(true, dir -> connections
+						.get(dir)
+						.orElse(null),
+				Direction.values());
+	}
+
+	public final Map<Direction, Node<Cap>> getNodes() {
+		return ETMaps.newHashMap(true, dir -> connections
+						.get(dir)
+						.flatMap(Connection::getPart)
+						.flatMap(NetworkPart::asNode)
+						.orElse(null),
+				Direction.values());
 	}
 
 	public ConduitType<Cap> getType() { return type; }
+
+	public final Optional<Link<Cap>> asLink() {
+		return Optional.of(this);
+	}
 
 	@Override
 	public final CompoundNBT serializeNBT() {
@@ -285,16 +306,15 @@ public abstract class Link<Cap> implements INBTSerializable<CompoundNBT> {
 
 	@Override
 	public final void deserializeNBT(CompoundNBT tag) {
-		ETNBTUtil.COMPOUND.tryRunAs(tag, "network", NBTUtil::readUniqueId, id -> {
-			setNetwork(Network.getNetworks(isClient).NETWORKS.computeIfAbsent(
-					id, id1 -> new Network(type, id1, isClient)));
-			this.networkID = id;
-		});
+		ETNBTUtil.COMPOUND.tryRunAs(tag, "network", NBTUtil::readUniqueId,
+				id -> setNetworkLazily(Network.getNetworks(isClient).NETWORKS.computeIfAbsent(
+						id, id1 -> new Network<>(type, id1, isClient)).asE(type)
+				));
 		connections.clear();
 		ListNBT list = tag.getList("connections", Constants.NBT.TAG_COMPOUND);
 		list.forEach(nbt -> {
-			Connection connection = deserializeConnection((CompoundNBT) nbt, Connection::new);
-			connections.put(connection.direction, connection);
+			Connection<Cap> connection = Connection.deserializeConnection((CompoundNBT) nbt, direction -> new Connection<>(this, direction, type, isClient));
+			connections.add(connection);
 		});
 		deserializeExtraNBT(tag);
 	}
@@ -308,7 +328,7 @@ public abstract class Link<Cap> implements INBTSerializable<CompoundNBT> {
 
 	public void remove(boolean dissolve) {
 		Network.removeLink(this, dissolve);
-		Link.unlink(this);
+		if (dissolve) Link.unlink(this);
 	}
 
 	protected abstract void markDirty();
@@ -327,4 +347,9 @@ public abstract class Link<Cap> implements INBTSerializable<CompoundNBT> {
 		return link;
 	}
 
+
+	@Override
+	protected boolean validate() {
+		return this.equals(Network.getLink(dim, pos, type, isClient));
+	}
 }

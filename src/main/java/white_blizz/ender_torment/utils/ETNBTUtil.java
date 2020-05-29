@@ -1,8 +1,12 @@
 package white_blizz.ender_torment.utils;
 
 import net.minecraft.nbt.CompoundNBT;
+import net.minecraft.nbt.INBT;
+import net.minecraft.nbt.ListNBT;
+import net.minecraft.util.ResourceLocation;
 import net.minecraftforge.common.util.Constants;
 
+import java.util.Map;
 import java.util.Optional;
 import java.util.function.BiFunction;
 import java.util.function.Consumer;
@@ -40,5 +44,29 @@ public class ETNBTUtil {
 	public static final NBTHelper<CompoundNBT> COMPOUND = new NBTHelper<>(Constants.NBT.TAG_COMPOUND, CompoundNBT::getCompound);
 	public static final NBTHelper<String> STRING = new NBTHelper<>(Constants.NBT.TAG_STRING, CompoundNBT::getString);
 
+	public interface RSToObj<T> extends Function<String, T> {
+		T rsFunc(ResourceLocation loc);
+		@Override default T apply(String s) { return rsFunc(new ResourceLocation(s)); }
+	}
 
+	public static <K, V> ListNBT serializeMap(Map<K, V> map,
+											  Function<K, INBT> keySerialize,
+											  Function<V, INBT> valueSerialize) {
+		return map.entrySet().stream().map(kvEntry -> {
+			CompoundNBT tag = new CompoundNBT();
+			tag.put("key", keySerialize.apply(kvEntry.getKey()));
+			tag.put("value", valueSerialize.apply(kvEntry.getValue()));
+			return tag;
+		}).collect(ListNBT::new, ListNBT::add, ListNBT::addAll);
+	}
+	public static <K, V> void deserializeMap(ListNBT list,
+											 Map<K, V> map,
+											 Function<INBT, K> keyDeserialize,
+											 Function<INBT, V> valueDeserialize) {
+		map.clear();
+		list.forEach(nbt -> {
+			CompoundNBT tag = (CompoundNBT) nbt;
+			map.put(keyDeserialize.apply(tag.get("key")), valueDeserialize.apply(tag.get("value")));
+		});
+	}
 }
