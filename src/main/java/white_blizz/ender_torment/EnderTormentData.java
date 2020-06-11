@@ -3,6 +3,7 @@ package white_blizz.ender_torment;
 import com.google.common.collect.ImmutableList;
 import com.mojang.datafixers.util.Pair;
 import mcp.MethodsReturnNonnullByDefault;
+import net.minecraft.advancements.criterion.StatePropertiesPredicate;
 import net.minecraft.block.Block;
 import net.minecraft.data.DataGenerator;
 import net.minecraft.data.IDataProvider;
@@ -13,10 +14,15 @@ import net.minecraft.enchantment.Enchantment;
 import net.minecraft.item.BlockItem;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemGroup;
+import net.minecraft.item.Items;
 import net.minecraft.potion.Effect;
+import net.minecraft.state.IntegerProperty;
+import net.minecraft.util.IItemProvider;
 import net.minecraft.util.ResourceLocation;
 import net.minecraft.world.storage.loot.*;
+import net.minecraft.world.storage.loot.conditions.BlockStateProperty;
 import net.minecraft.world.storage.loot.functions.CopyNbt;
+import net.minecraft.world.storage.loot.functions.SetCount;
 import net.minecraftforge.client.model.generators.*;
 import net.minecraftforge.common.data.LanguageProvider;
 import net.minecraftforge.fml.RegistryObject;
@@ -24,17 +30,16 @@ import net.minecraftforge.fml.event.lifecycle.GatherDataEvent;
 import net.minecraftforge.registries.IForgeRegistryEntry;
 import white_blizz.ender_torment.common.ETTags;
 import white_blizz.ender_torment.common.block.ETBlocks;
+import white_blizz.ender_torment.common.block.StackingSnowBlock;
 import white_blizz.ender_torment.common.enchantment.ETEnchantments;
+import white_blizz.ender_torment.common.item.ETBlockItem;
 import white_blizz.ender_torment.common.item.ETItems;
-import white_blizz.ender_torment.common.item.EnderFluxCapacitorItem;
 import white_blizz.ender_torment.common.potion.ETEffects;
-import white_blizz.ender_torment.utils.ETDeferredRegisterHandler;
 import white_blizz.ender_torment.utils.Ref;
 
 import javax.annotation.ParametersAreNonnullByDefault;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.function.*;
 import java.util.stream.Collectors;
 
@@ -185,12 +190,28 @@ public final class EnderTormentData {
 			simpleBlock(ETBlocks.ENDER_FLUX_COLLECTOR.getRaw(), "piston_top");
 			simpleBlock(ETBlocks.ENDER_FLUX_CONVERTER.getRaw(), "piston_top_sticky");
 			simpleBlock(ETBlocks.ENDER_FLUX_BATTERY.getRaw(), "piston_bottom");
+			simpleBlock(ETBlocks.GOO.getRaw(), "slime_block");
 			terBlock(ETBlocks.CONDUIT);
+			terBlock(ETBlocks.COMPACTION.getRaw());
+
+			builtIn(ETBlocks.SNOW);
+			builtIn(ETBlocks.SNOW_BLOCK);
+			builtIn(ETBlocks.ICE);
+			builtIn(ETBlocks.PACKED_ICE);
+			builtIn(ETBlocks.BLUE_ICE);
+		}
+
+		private void builtIn(ETBlocks.BlockItemObject<? extends Block, ?> block) {
+			getVariantBuilder(block.get()).partialState().addModels(
+					new ConfiguredModel(
+							models().getExistingFile(modLoc(block.getId().getPath()))
+					)
+			);
 		}
 
 		@SuppressWarnings("unchecked")
 		private void terBlock(RegistryObject<? extends Block> block) {
-			BlockModelBuilder builder = models().getBuilder(Objects.requireNonNull(block.get().getRegistryName()).getPath())
+			BlockModelBuilder builder = models().getBuilder(block.getId().getPath())
 					.texture("particle", "wip");
 			super.simpleBlock(block.get(), builder);
 		}
@@ -263,7 +284,46 @@ public final class EnderTormentData {
 				registerLootTable(ETBlocks.ENDER_FLUX_BATTERY.get(), this.withNBTs(
 						new Mapping("items")
 				));
-				registerLootTable(ETBlocks.CONDUIT.get(), new LootTable.Builder());
+				registerDropSelfLootTable(ETBlocks.GOO.get());
+
+				layered(ETBlocks.SNOW.get(), Items.SNOWBALL, StackingSnowBlock.LAYERS, IntUnaryOperator.identity());
+				drop(ETBlocks.SNOW_BLOCK.get(), Items.SNOWBALL, 8);
+				drop(ETBlocks.ICE.get(), Items.ICE);
+				drop(ETBlocks.PACKED_ICE.get(), Items.PACKED_ICE);
+				drop(ETBlocks.BLUE_ICE.get(), Items.BLUE_ICE);
+			}
+
+			private void drop(Block block, IItemProvider item) {
+				registerLootTable(block, LootTable.builder().addLootPool(
+						LootPool.builder().addEntry(
+								ItemLootEntry.builder(item)
+						)
+				));
+			}
+
+			private void drop(Block block, IItemProvider item, int count) {
+				registerLootTable(block, LootTable.builder().addLootPool(
+						LootPool.builder().addEntry(
+								ItemLootEntry.builder(item)
+										.acceptFunction(SetCount.builder(ConstantRange.of(count)))
+						)
+				));
+			}
+
+			private void layered(Block block, IItemProvider item, IntegerProperty property, IntUnaryOperator layer2count) {
+				LootEntry.Builder<?> entry = AlternativesLootEntry.builder();
+
+				property.getAllowedValues().forEach(i -> entry.alternatively(
+						ItemLootEntry.builder(item)
+								.acceptCondition(BlockStateProperty.builder(block)
+										.fromProperties(StatePropertiesPredicate.Builder.newBuilder()
+												.withIntProp(property, i)
+										)
+								)
+								.acceptFunction(SetCount.builder(ConstantRange.of(layer2count.applyAsInt(i))))
+				));
+
+				registerLootTable(block, LootTable.builder().addLootPool(LootPool.builder().addEntry(entry)));
 			}
 
 			@Override

@@ -1,5 +1,6 @@
 package white_blizz.ender_torment;
 
+import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.eventbus.api.IEventBus;
 import net.minecraftforge.fml.DistExecutor;
@@ -8,17 +9,23 @@ import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.fml.event.lifecycle.FMLCommonSetupEvent;
 import net.minecraftforge.fml.event.lifecycle.GatherDataEvent;
 import net.minecraftforge.fml.event.lifecycle.InterModEnqueueEvent;
+import net.minecraftforge.fml.event.server.FMLServerStartingEvent;
 import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import white_blizz.ender_torment.client.ClientConfig;
+import white_blizz.ender_torment.client.ClientRegister;
 import white_blizz.ender_torment.common.CommonConfig;
 import white_blizz.ender_torment.common.ETRegistry;
 import white_blizz.ender_torment.common.block.ETBlocks;
+import white_blizz.ender_torment.common.command.ETCommands;
+import white_blizz.ender_torment.common.compaction.CapabilityCompaction;
 import white_blizz.ender_torment.common.conduit.ConduitType;
 import white_blizz.ender_torment.common.conduit.ConduitTypes;
 import white_blizz.ender_torment.common.conduit.Network;
 import white_blizz.ender_torment.common.container.ETContainers;
+import white_blizz.ender_torment.common.dim.ETBiomes;
+import white_blizz.ender_torment.common.dim.ETDims;
 import white_blizz.ender_torment.common.enchantment.CapabilityEnchantableBlock;
 import white_blizz.ender_torment.common.enchantment.ETEnchantments;
 import white_blizz.ender_torment.common.ender_flux.CapabilityEnderFlux;
@@ -74,6 +81,7 @@ public final class EnderTorment {
 		modEventBus.addListener(ETRegistry::register);
 		modEventBus.addGenericListener(ConduitType.class, ConduitTypes::register);
 
+		forgeEventBus.addListener(this::commands);
 		forgeEventBus.register(Network.class);
 
 		registerDeferredRegisterHandlers(
@@ -81,11 +89,15 @@ public final class EnderTorment {
 				ETBlocks::new,
 				ETEnchantments::new,
 				ETContainers::new,
-				ETEffects::new
+				ETEffects::new,
+				ETDims::new,
+				ETBiomes::new
 		);
 
-		SIDED_CONFIG = DistExecutor.runForDist(() -> ClientConfig::new, () -> ServerConfig::new);
+		SIDED_CONFIG = DistExecutor.safeRunForDist(() -> ClientConfig::new, () -> ServerConfig::new);
 		COMMON_CONFIG = new CommonConfig();
+
+		DistExecutor.safeRunWhenOn(Dist.CLIENT, () -> ClientRegister::addPackFinder);
 	}
 
 
@@ -95,10 +107,13 @@ public final class EnderTorment {
 
 	private void preInit(FMLCommonSetupEvent evt) {
 		CapabilityEnderFlux.register();
+		CapabilityCompaction.register();
 		CapabilityEnchantableBlock.register();
 	}
 
-
+	private void commands(FMLServerStartingEvent evt) {
+		ETCommands.register(evt.getCommandDispatcher());
+	}
 
 	private void enqueueMSGs(InterModEnqueueEvent evt) {
 		InterModComms.sendTo("theoneprobe", "getTheOneProbe",

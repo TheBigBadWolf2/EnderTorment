@@ -13,6 +13,7 @@ import net.minecraftforge.common.util.LazyOptional;
 import net.minecraftforge.fml.server.ServerLifecycleHooks;
 import white_blizz.ender_torment.common.ETRegistry;
 import white_blizz.ender_torment.utils.ETNBTUtil;
+import white_blizz.ender_torment.utils.ETWorldUtils;
 
 import javax.annotation.Nullable;
 import java.util.Objects;
@@ -67,7 +68,8 @@ public class Connection<Cap> {
 	}
 
 	static <Cap> boolean canBeNode(DimensionType dim, BlockPos pos, ConduitType<Cap> type, Direction direction) {
-		ServerWorld world = ServerLifecycleHooks.getCurrentServer().getWorld(dim);
+		World world = ETWorldUtils.getWorld(dim);
+		if (world == null) return false;
 		if (!world.isAreaLoaded(pos, 0)) return false; //Retrieve only if loaded...
 
 		TileEntity te = world.getTileEntity(pos);
@@ -78,8 +80,9 @@ public class Connection<Cap> {
 
 	@Nullable
 	protected Node<Cap> createNode() {
-		if (dim == null || pos == null || isClient) return null;
-		World world = ServerLifecycleHooks.getCurrentServer().getWorld(dim);
+		if (dim == null || pos == null) return null;
+		World world = ETWorldUtils.getWorld(dim);
+		if (world == null) return null;
 		if (!world.isAreaLoaded(pos, 0)) return null; //Retrieve only if loaded...
 
 		TileEntity te = world.getTileEntity(pos);

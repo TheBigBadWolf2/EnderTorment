@@ -52,6 +52,7 @@ public class ETShaderInstance implements IETShaderManager, AutoCloseable {
 
    public ETShaderInstance(IResourceManager p_i50988_1_, String name) throws IOException {
       ResourceLocation rl = ResourceLocation.tryCreate(name);
+      assert rl != null;
       ResourceLocation resourcelocation = new ResourceLocation(rl.getNamespace(), "shaders/program/" + rl.getPath() + ".json");
       this.name = name;
       IResource iresource = null;

@@ -1,5 +1,6 @@
 package white_blizz.ender_torment.common.item;
 
+import mcp.MethodsReturnNonnullByDefault;
 import net.minecraft.block.BlockState;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.item.Item;
@@ -12,15 +13,34 @@ import net.minecraft.world.IWorldReader;
 import net.minecraft.world.World;
 import net.minecraftforge.common.ToolType;
 
+import javax.annotation.ParametersAreNonnullByDefault;
+
+@MethodsReturnNonnullByDefault
+@ParametersAreNonnullByDefault
 public class WrenchItem extends ETItem {
+	private static final ToolType WRENCH = ToolType.get("wrench");
+
 	public WrenchItem() {
 		super(new Item.Properties().group(ETItems.ENDER_MISC)
-				.addToolType(ToolType.get("wrench"), 1));
+				.addToolType(WRENCH, 1));
 	}
+
+	private boolean isWrenchableBlock(BlockState state) { return state.isToolEffective(WRENCH); }
+	private boolean isWrenchableBlock(IWorldReader world, BlockPos pos) { return isWrenchableBlock(world.getBlockState(pos)); }
 
 	@Override
 	public boolean doesSneakBypassUse(ItemStack stack, IWorldReader world, BlockPos pos, PlayerEntity player) {
-		return world.getBlockState(pos).isToolEffective(ToolType.get("wrench"));
+		return isWrenchableBlock(world, pos);
+	}
+
+	@Override
+	public boolean canPlayerBreakBlockWhileHolding(BlockState state, World worldIn, BlockPos pos, PlayerEntity player) {
+		return !isWrenchableBlock(state) && !player.isCreative();
+	}
+
+	@Override
+	public boolean onBlockStartBreak(ItemStack itemstack, BlockPos pos, PlayerEntity player) {
+		return false;
 	}
 
 	@Override

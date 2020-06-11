@@ -1,6 +1,7 @@
 package white_blizz.ender_torment.common.block;
 
 import net.minecraft.block.Block;
+import net.minecraft.block.Blocks;
 import net.minecraft.item.Item;
 import net.minecraft.tileentity.TileEntity;
 import net.minecraft.tileentity.TileEntityType;
@@ -9,6 +10,7 @@ import net.minecraftforge.fml.RegistryObject;
 import net.minecraftforge.registries.DeferredRegister;
 import net.minecraftforge.registries.ForgeRegistries;
 import net.minecraftforge.registries.IForgeRegistry;
+import white_blizz.ender_torment.common.item.CompactionItem;
 import white_blizz.ender_torment.common.item.ETBlockItem;
 import white_blizz.ender_torment.common.item.ETEnchantableBlockItem;
 import white_blizz.ender_torment.common.item.ETItems;
@@ -46,7 +48,7 @@ public final class ETBlocks extends ETDeferredRegisterHandler {
 		private <TBlock extends Block & IETBlock, TItem extends Item> BlockItemObject<TBlock, TItem> reg(
 				String name,
 				Supplier<TBlock> blockFactory,
-				BiFunction<Supplier<? extends Block>, Item.Properties, TItem> itemFactory,
+				BiFunction<Supplier<TBlock>, Item.Properties, TItem> itemFactory,
 				Supplier<Item.Properties> propFactory
 		) {
 			RegistryObject<TBlock> block = register(name, blockFactory);
@@ -79,12 +81,20 @@ public final class ETBlocks extends ETDeferredRegisterHandler {
 	public static final BlockItemObject<EnderFluxBatteryBlock, ETBlockItem> ENDER_FLUX_BATTERY =
 			BLOCKS.reg("ender_flux_battery", EnderFluxBatteryBlock::new, ETBlockItem::new, ETBlocks::getDefault);
 	public static final RegistryObject<ConduitBlock> CONDUIT = BLOCKS.register("conduit" , ConduitBlock::new);
+	public static final BlockItemObject<CompactionBlock, CompactionItem> COMPACTION = BLOCKS.reg("compaction", CompactionBlock::new, CompactionItem::new, ETBlocks::getDefault);
+	public static final BlockItemObject<GooBlock, ETBlockItem> GOO = BLOCKS.reg("goo", GooBlock::new, ETBlockItem::new, ETBlocks::getDefault);
 
+	public static final BlockItemObject<EndSnowBlock, ETBlockItem> BLUE_ICE = BLOCKS.reg("blue_ice", () -> new EndSnowBlock(Blocks.BLUE_ICE), ETBlockItem::new, ETBlocks::getDefault);
+	public static final BlockItemObject<MiddleSnowBlock, ETBlockItem> PACKED_ICE = BLOCKS.reg("packed_ice", MiddleSnowBlock.withBlock(Blocks.PACKED_ICE, BLUE_ICE), ETBlockItem::new, ETBlocks::getDefault);
+	public static final BlockItemObject<MiddleSnowBlock, ETBlockItem> ICE = BLOCKS.reg("ice", MiddleSnowBlock.withBlock(Blocks.ICE, PACKED_ICE), ETBlockItem::new, ETBlocks::getDefault);
+	public static final BlockItemObject<MiddleSnowBlock, ETBlockItem> SNOW_BLOCK = BLOCKS.reg("snow_block", () -> MiddleSnowBlock.withBlock(Blocks.SNOW_BLOCK, ICE).get(), ETBlockItem::new, ETBlocks::getDefault);
+	public static final BlockItemObject<StackingSnowBlock, ETBlockItem> SNOW = BLOCKS.reg("snow", StackingSnowBlock::new, ETBlockItem::new, ETBlocks::getDefault);
 
 	public static final RegistryObject<TileEntityType<EnderFluxCollectorTE>> ENDER_FLUX_COLLECTOR_TYPE = TILE_ENTITIES.register("ender_flux_collector", EnderFluxCollectorTE::new, ENDER_FLUX_COLLECTOR);
 	public static final RegistryObject<TileEntityType<EnderFluxConverterTE>> ENDER_FLUX_CONVERTER_TYPE = TILE_ENTITIES.register("ender_flux_converter", EnderFluxConverterTE::new, ENDER_FLUX_CONVERTER);
 	public static final RegistryObject<TileEntityType<EnderFluxBatteryTE>> ENDER_FLUX_BATTERY_TYPE = TILE_ENTITIES.register("ender_flux_battery", EnderFluxBatteryTE::new, ENDER_FLUX_BATTERY);
 	public static final RegistryObject<TileEntityType<ConduitTE>> CONDUIT_TYPE = TILE_ENTITIES.register("conduit", ConduitTE::new, CONDUIT);
+	public static final RegistryObject<TileEntityType<CompactionTE>> COMPACTION_TYPE = TILE_ENTITIES.register("compaction", CompactionTE::new, COMPACTION);
 
 	public ETBlocks(IEventBus bus) { super(bus, BLOCKS, TILE_ENTITIES); }
 

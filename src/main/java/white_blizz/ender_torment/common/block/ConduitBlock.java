@@ -54,7 +54,9 @@ import java.util.stream.Stream;
 public class ConduitBlock extends ETBlock {
 	public ConduitBlock() {
 		super(Block.Properties.create(Material.ROCK)
-				.harvestTool(ToolType.get("wrench")));
+				.harvestTool(ToolType.get("wrench"))
+				.noDrops()
+		);
 	}
 
 	@SuppressWarnings("deprecation")
@@ -261,6 +263,11 @@ public class ConduitBlock extends ETBlock {
 			}
 			return ActionResultType.FAIL;
 		}).orElse(ActionResultType.FAIL);
+	}
+
+	@Override
+	public void onBlockClicked(BlockState state, World worldIn, BlockPos pos, PlayerEntity player) {
+
 	}
 
 	@Override

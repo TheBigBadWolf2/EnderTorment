@@ -13,10 +13,9 @@ import net.minecraftforge.common.capabilities.Capability;
 import net.minecraftforge.common.capabilities.CapabilityInject;
 import net.minecraftforge.common.util.LazyOptional;
 import white_blizz.ender_torment.common.block.IEnderFluxBlock;
-import white_blizz.ender_torment.common.ender_flux.IEnderFluxGenerator;
+import white_blizz.ender_torment.common.conduit.ILinkable;
 import white_blizz.ender_torment.common.ender_flux.IEnderFluxStorage;
 import white_blizz.ender_torment.common.potion.ETEffects;
-import white_blizz.ender_torment.utils.Conversion;
 import white_blizz.ender_torment.utils.ETUtils;
 import white_blizz.ender_torment.utils.InfoUtils;
 import white_blizz.ender_torment.utils.Ref;
@@ -108,6 +107,36 @@ public final class TOPHandler {
 		}*/
 	}
 
+	private static class LinkStyle implements IReadOnlyLayoutStyle {
+		private final Integer borderColor;
+		private final int spacing;
+		private final ElementAlignment alignment;
+
+		private LinkStyle(Integer borderColor, int spacing, ElementAlignment alignment) {
+			this.borderColor = borderColor;
+			this.spacing = spacing;
+			this.alignment = alignment;
+		}
+
+		@Override public Integer getBorderColor() { return borderColor; }
+		@Override public int getSpacing() { return spacing; }
+		@Override public ElementAlignment getAlignment() { return alignment; }
+	}
+
+	public static void displayLinks(IProbeInfo info, ILinkable linkable) {
+		LinkStyle style = new LinkStyle(-1, 20, ElementAlignment.ALIGN_CENTER);
+
+		IProbeInfo pane, col1, col2;
+		pane = info.horizontal(style);
+		col1 = pane.vertical();
+		col2 = pane.vertical();
+
+		linkable.getLinks().forEach((type, link) -> {
+			col1.text(info.STARTLOC + type.getTranslationKey() + info.ENDLOC);
+			col2.text(link.getNetworkID().toString());
+		});
+	}
+
 	public static class DataPacket<C> {
 		private DataPacket(ProbeMode probeMode, IProbeInfo iProbeInfo, PlayerEntity playerEntity, World world, BlockState blockState, IProbeHitData iProbeHitData, C cap) {
 			this.probe = new Probe(probeMode, iProbeInfo, iProbeHitData);
@@ -173,7 +202,11 @@ public final class TOPHandler {
 	private static final List<ProbeData<?>> datas = ImmutableList.of(
 			new ProbeData<>(() -> ENDER_FLUX,
 					packet -> displayEnderFlux(packet.probe.mode, packet.probe.info, packet.cap)
-			)
+			),
+			new ProbeData<>(te -> {
+				if (te instanceof ILinkable) return LazyOptional.of(() -> (ILinkable) te);
+				return LazyOptional.empty();
+			}, packet -> displayLinks(packet.probe.info, packet.cap))
 	);
 
 	private static class ETTileEntityInfoProvider implements IProbeInfoProvider {

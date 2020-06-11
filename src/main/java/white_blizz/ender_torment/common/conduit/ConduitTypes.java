@@ -39,7 +39,8 @@ public class ConduitTypes {
 			IItemHandler.class,
 			() -> CapabilityItemHandler.ITEM_HANDLER_CAPABILITY,
 			new ItemConduitTypeHandler()).setRegName("item");
-	public static final ConduitType<IFluidHandler> FLUID = new ConduitType<>(
+	public static final ConduitType<IFluidHandler>
+			FLUID = new ConduitType<>(
 			0xFF0000FF,
 			IFluidHandler.class,
 			() -> CapabilityFluidHandler.FLUID_HANDLER_CAPABILITY,

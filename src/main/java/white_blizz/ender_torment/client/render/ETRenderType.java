@@ -16,13 +16,13 @@ public class ETRenderType extends RenderType {
 
 	public static final RenderType CONDUIT = makeType(
 			Ref.MOD.str.loc("conduit"),
-			DefaultVertexFormats.POSITION_COLOR,
+			DefaultVertexFormats.BLOCK,
 			GL11.GL_QUADS,
 			256,
 			RenderType.State.getBuilder()
 //					.layer(RenderState.POLYGON_OFFSET_LAYERING)
 //					.transparency(NO_TRANSPARENCY)
-//					.texture(NO_TEXTURE)
+					.texture(new TextureState(Ref.MOD.rl.loc("textures/block", "conduit", "png"), false, false))
 //					.depthTest(DEPTH_ALWAYS)
 //					.cull(CULL_DISABLED)
 //					.lightmap(LIGHTMAP_DISABLED)
@@ -41,6 +41,6 @@ public class ETRenderType extends RenderType {
 					.depthTest(DEPTH_ALWAYS)
 					.cull(CULL_DISABLED)
 					.lightmap(LIGHTMAP_DISABLED)
-					.writeMask(COLOR_WRITE)
+					.writeMask(COLOR_DEPTH_WRITE)
 					.build(false));
 }

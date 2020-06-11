@@ -13,9 +13,12 @@ import net.minecraft.world.World;
 import net.minecraftforge.common.capabilities.Capability;
 import net.minecraftforge.common.util.LazyOptional;
 
+import java.util.Arrays;
 import java.util.Optional;
 import java.util.Vector;
+import java.util.function.BooleanSupplier;
 import java.util.function.Function;
+import java.util.function.Supplier;
 
 @SuppressWarnings("OptionalUsedAsFieldOrParameterType")
 public final class ETUtils {
@@ -28,6 +31,10 @@ public final class ETUtils {
 	) {
 		if (world == null) return Optional.empty();
 		return Optional.ofNullable(world.getTileEntity(pos));
+	}
+
+	public static <T> LazyOptional<T> mapToLazy(Optional<T> opt) {
+		return mapToLazy(opt, t -> LazyOptional.of(() -> t));
 	}
 
 	public static <I, O> LazyOptional<O> mapToLazy(
@@ -47,6 +54,11 @@ public final class ETUtils {
 		int i = MathHelper.floor(value);
 		double d = value % 1;
 		return new Tuple<>(i, d);
+	}
+
+	public static <T> Optional<T> getOpt(BooleanSupplier test, Supplier<T> supplier) {
+		if (test.getAsBoolean()) return Optional.ofNullable(supplier.get());
+		return Optional.empty();
 	}
 
 	public static void d1(IWorld world, double range, Vec3d center) {
@@ -84,5 +96,20 @@ public final class ETUtils {
 				}
 			}
 		}
+	}
+
+	public static <T> T[] shift(final T[] values, int by) {
+		int l = values.length;
+		T[] copy = Arrays.copyOf(values, l);
+		by %= l;
+		if (by != 0) {
+			for (int i = 0; i < l; i++) {
+				int j = i + by;
+				if (j >= l) j %= l;
+				else if (j < 0) j += l;
+				copy[j] = values[i];
+			}
+		}
+		return copy;
 	}
 }

@@ -19,7 +19,6 @@ import white_blizz.ender_torment.common.ender_flux.IEnderFluxStorage;
 import white_blizz.ender_torment.common.item.EnderFluxCapacitorItem;
 import white_blizz.ender_torment.utils.CombinedWrapper;
 import white_blizz.ender_torment.utils.IEnchantmentList;
-import white_blizz.ender_torment.utils.Ref;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -139,8 +138,8 @@ public class EnderFluxBatteryTE extends ETTileEntity implements INamedContainerP
 	protected List<Cap<?>> getCaps() {
 		return CapList.New()
 				.newCap(ITEM_HANDLER_CAP)
-				.map(null, () -> items).next(ENDER_FLUX_CAP)
-				.map(null, () -> CombinedWrapper.convert(
+				.mapS(null, () -> items).next(ENDER_FLUX_CAP)
+				.mapS(null, () -> CombinedWrapper.convert(
 						CombinedFluxCapacitors::new,
 						CombinedWrapper.fromItems(ENDER_FLUX_CAP, new IEnderFluxStorage[0]),
 						items

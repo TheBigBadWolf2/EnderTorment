@@ -1,0 +1,5 @@
+{
+  "loader": "ender_torment:snow",
+  "top": "minecraft:block/snow",
+  "bottom": "minecraft:block/ice"
+}

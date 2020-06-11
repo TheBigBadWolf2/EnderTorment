@@ -190,11 +190,11 @@ public class EnderFluxConverterTE extends ETTileEntity implements ITickableTileE
 
 	@Override
 	protected List<Cap<?>> getCaps() {
-		return ImmutableList.of(
-				new Cap<>(CapabilityEnderFlux.ENDER_FLUX, () -> enderFluxStorage),
-				new Cap<>(CapabilityEnergy.ENERGY, () -> enderFluxStorage),
-				new Cap<>(CapabilityEnchantableBlock.ENCHANTABLE_BLOCK, () -> enchantable),
-				new Cap<>(CapabilityItemHandler.ITEM_HANDLER_CAPABILITY, () -> enchantable)
-		);
+		return CapList.New()
+				.addCapS(CapabilityEnderFlux.ENDER_FLUX, () -> enderFluxStorage)
+				.addCapS(CapabilityEnergy.ENERGY, () -> enderFluxStorage)
+				.addCapS(CapabilityEnchantableBlock.ENCHANTABLE_BLOCK, () -> enchantable)
+				.addCapS(CapabilityItemHandler.ITEM_HANDLER_CAPABILITY, () -> enchantable)
+				.build();
 	}
 }

@@ -365,10 +365,10 @@ public final class ShaderHandler implements AutoCloseable {
 		RenderSystem.disableDepthTest();
 		RenderSystem.disableAlphaTest();
 		RenderSystem.enableTexture();
-		RenderSystem.matrixMode(5890);
+		RenderSystem.matrixMode(0x1702);
 		RenderSystem.loadIdentity();
 		shader.render(partialTicks);
-		RenderSystem.matrixMode(5889);
+		RenderSystem.matrixMode(0x1701);
 	}
 
 	private void render(ETShaderGroup group, float partialTicks) {
@@ -376,10 +376,10 @@ public final class ShaderHandler implements AutoCloseable {
 		RenderSystem.disableDepthTest();
 		RenderSystem.disableAlphaTest();
 		RenderSystem.enableTexture();
-		RenderSystem.matrixMode(5890);
+		RenderSystem.matrixMode(0x1702);
 		RenderSystem.loadIdentity();
 		group.render(partialTicks);
-		RenderSystem.matrixMode(5889);
+		RenderSystem.matrixMode(0x1701);
 	}
 
 	@Override

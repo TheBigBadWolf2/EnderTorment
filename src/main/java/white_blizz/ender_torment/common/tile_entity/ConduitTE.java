@@ -1,5 +1,6 @@
 package white_blizz.ender_torment.common.tile_entity;
 
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import it.unimi.dsi.fastutil.objects.Object2BooleanArrayMap;
@@ -21,6 +22,7 @@ import white_blizz.ender_torment.common.conduit.io.IConduitIO;
 import white_blizz.ender_torment.common.conduit.io.IConduitInput;
 import white_blizz.ender_torment.common.conduit.io.IConduitOutput;
 import white_blizz.ender_torment.utils.Cashe;
+import white_blizz.ender_torment.utils.ETUtils;
 
 import javax.annotation.Nullable;
 import javax.annotation.ParametersAreNonnullByDefault;
@@ -56,23 +58,13 @@ public class ConduitTE extends ETTileEntity implements ILinkable {
 			cashe = new Cashe<>(ConduitTE.this::getWorld, pos, World::getTileEntity, TileEntity::isRemoved);
 		}
 
-		@Override
-		public Optional<IConduitInput<C>> asInput() {
-			if (ioType == IOType.IN) return Optional.of(this);
-			return Optional.empty();
-		}
+		@Override public boolean isInput() { return ioType == IOType.IN; }
+		@Override public boolean isBuffer() { return ioType == IOType.BUF; }
+		@Override public boolean isOutput() { return ioType == IOType.OUT; }
 
-		@Override
-		public Optional<IConduitBuffer<C>> asBuffer() {
-			if (ioType == IOType.BUF) return Optional.of(this);
-			return Optional.empty();
-		}
-
-		@Override
-		public Optional<IConduitOutput<C>> asOutput() {
-			if (ioType == IOType.OUT) return Optional.of(this);
-			return Optional.empty();
-		}
+		@Override public Optional<IConduitInput<C>> asInput() { return ETUtils.getOpt(this::isInput, () -> this); }
+		@Override public Optional<IConduitBuffer<C>> asBuffer() { return ETUtils.getOpt(this::isBuffer, () -> this); }
+		@Override public Optional<IConduitOutput<C>> asOutput() { return ETUtils.getOpt(this::isOutput, () -> this); }
 
 		@Override public Optional<IConduitIO<C>> asIO() { return Optional.of(this); }
 
@@ -261,6 +253,7 @@ public class ConduitTE extends ETTileEntity implements ILinkable {
 				lThat.updateNetwork();
 				lThat.markDirty();
 			}
+
 			return true;
 		}
 		return false;
@@ -287,7 +280,7 @@ public class ConduitTE extends ETTileEntity implements ILinkable {
 		tag.put("links", list);
 	}
 
-	@Override protected List<Cap<?>> getCaps() { return Lists.newArrayList(); }
+	@Override protected List<Cap<?>> getCaps() { return ImmutableList.of(); }
 
 	/*public Collection<Link> getLinks() {
 		return links.values();

@@ -4,4 +4,5 @@ import java.util.Optional;
 
 public interface IConduitInput<Cap> extends IConduitIO<Cap> {
 	@Override default Optional<IConduitInput<Cap>> asInput() { return Optional.of(this); }
+	@Override default boolean isInput() { return true; }
 }

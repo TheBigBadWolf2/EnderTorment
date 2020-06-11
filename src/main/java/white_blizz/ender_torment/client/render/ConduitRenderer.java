@@ -7,53 +7,65 @@ import net.minecraft.client.gui.FontRenderer;
 import net.minecraft.client.renderer.*;
 import net.minecraft.client.renderer.tileentity.TileEntityRenderer;
 import net.minecraft.client.renderer.tileentity.TileEntityRendererDispatcher;
+import net.minecraft.client.world.ClientWorld;
 import net.minecraft.util.Direction;
-import net.minecraft.util.math.Vec3d;
-import net.minecraft.util.math.Vec3i;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+import org.lwjgl.opengl.GL11;
+import org.lwjgl.opengl.GL11C;
 import white_blizz.ender_torment.client.ClientConfig;
+import white_blizz.ender_torment.client.render.shader.ETShaderInstance;
 import white_blizz.ender_torment.common.ETRegistry;
 import white_blizz.ender_torment.common.conduit.ConduitType;
 import white_blizz.ender_torment.common.conduit.Link;
+import white_blizz.ender_torment.common.conduit.Node;
 import white_blizz.ender_torment.common.tile_entity.ConduitTE;
 
 import javax.annotation.ParametersAreNonnullByDefault;
 
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.List;
-import java.util.Map;
+import java.io.IOException;
+import java.util.*;
+import java.util.stream.Collectors;
 
 import static white_blizz.ender_torment.client.render.ETRenderType.CONDUIT;
 import static white_blizz.ender_torment.client.render.ETRenderType.OVERLAY_LINES;
+import static white_blizz.ender_torment.client.render.ModelConduit.ConnectionType;
 
 @SuppressWarnings("PointlessBitwiseExpression")
 @ParametersAreNonnullByDefault
 public class ConduitRenderer extends TileEntityRenderer<ConduitTE> {
+	private static final boolean CASHE = false; //set to false for debugging.
 
+	static final Logger LOGGER = LogManager.getLogger();
+
+	static final Map<ConduitType<?>, ModelConduit> MAP = new HashMap<>();
+	static float TIME = 0;
+
+	private static ModelBox newBox(Vector3f pos, Vector3f size) {
+		float x = pos.getX(), y = pos.getY(), z = pos.getZ();
+		float w = size.getX(), h = size.getY(), d = size.getZ();
+
+		if (w < 0) {
+			x += w;
+			w = -w;
+		}
+		if (h < 0) {
+			y += h;
+			h = -h;
+		}
+		if (d < 0) {
+			z += d;
+			d = -d;
+		}
+		return new ModelBox(x, y, z, w, h, d);
+	}
 
 	public static class ModelBox {
 		private static final int[] map = {
 				2, 3, 4, 5, 1, 0
 		};
 
-		public static ModelBox newBox(Vector3f pos, Vector3f size) {
-			float x = pos.getX(), y = pos.getY(), z = pos.getZ();
-			float w = size.getX(), h = size.getY(), d = size.getZ();
 
-			if (w < 0) {
-				x += w;
-				w = -w;
-			}
-			if (h < 0) {
-				y += h;
-				h = -h;
-			}
-			if (d < 0) {
-				z += d;
-				d = -d;
-			}
-			return new ModelBox(x, y, z, w, h, d);
-		}
 
 		private final TexturedQuad[] quads;
 		public final float posX1;
@@ -81,29 +93,29 @@ public class ConduitRenderer extends TileEntityRenderer<ConduitTE> {
 			this.posY2 = y + height;
 			this.posZ2 = z + depth;
 			this.quads = new TexturedQuad[6];
-			float f = x + width;
-			float f1 = y + height;
-			float f2 = z + depth;
+			float x2 = x + width;
+			float y2 = y + height;
+			float z2 = z + depth;
 			x = x - deltaX;
 			y = y - deltaY;
 			z = z - deltaZ;
-			f = f + deltaX;
-			f1 = f1 + deltaY;
-			f2 = f2 + deltaZ;
+			x2 = x2 + deltaX;
+			y2 = y2 + deltaY;
+			z2 = z2 + deltaZ;
 			if (mirorIn) {
-				float f3 = f;
-				f = x;
+				float f3 = x2;
+				x2 = x;
 				x = f3;
 			}
 
-			PositionTextureVertex modelrenderer$positiontexturevertex7 = new PositionTextureVertex(x, y, z, 0.0F, 0.0F);
-			PositionTextureVertex modelrenderer$positiontexturevertex = new PositionTextureVertex(f, y, z, 0.0F, 8.0F);
-			PositionTextureVertex modelrenderer$positiontexturevertex1 = new PositionTextureVertex(f, f1, z, 8.0F, 8.0F);
-			PositionTextureVertex modelrenderer$positiontexturevertex2 = new PositionTextureVertex(x, f1, z, 8.0F, 0.0F);
-			PositionTextureVertex modelrenderer$positiontexturevertex3 = new PositionTextureVertex(x, y, f2, 0.0F, 0.0F);
-			PositionTextureVertex modelrenderer$positiontexturevertex4 = new PositionTextureVertex(f, y, f2, 0.0F, 8.0F);
-			PositionTextureVertex modelrenderer$positiontexturevertex5 = new PositionTextureVertex(f, f1, f2, 8.0F, 8.0F);
-			PositionTextureVertex modelrenderer$positiontexturevertex6 = new PositionTextureVertex(x, f1, f2, 8.0F, 0.0F);
+			PositionTextureVertex vertex7 = new PositionTextureVertex( x,  y,  z, 0.0F, 0.0F);
+			PositionTextureVertex vertex0 = new PositionTextureVertex(x2,  y,  z, 0.0F, 8.0F);
+			PositionTextureVertex vertex1 = new PositionTextureVertex(x2, y2,  z, 8.0F, 8.0F);
+			PositionTextureVertex vertex2 = new PositionTextureVertex( x, y2,  z, 8.0F, 0.0F);
+			PositionTextureVertex vertex3 = new PositionTextureVertex( x,  y, z2, 0.0F, 0.0F);
+			PositionTextureVertex vertex4 = new PositionTextureVertex(x2,  y, z2, 0.0F, 8.0F);
+			PositionTextureVertex vertex5 = new PositionTextureVertex(x2, y2, z2, 8.0F, 8.0F);
+			PositionTextureVertex vertex6 = new PositionTextureVertex( x, y2, z2, 8.0F, 0.0F);
 			float f4 = (float)texOffX;
 			float f5 = (float)texOffX + depth;
 			float f6 = (float)texOffX + depth + width;
@@ -113,12 +125,12 @@ public class ConduitRenderer extends TileEntityRenderer<ConduitTE> {
 			float f10 = (float)texOffY;
 			float f11 = (float)texOffY + depth;
 			float f12 = (float)texOffY + depth + height;
-			this.quads[2] = new TexturedQuad(new PositionTextureVertex[]{modelrenderer$positiontexturevertex4, modelrenderer$positiontexturevertex3, modelrenderer$positiontexturevertex7, modelrenderer$positiontexturevertex}, f5, f10, f6, f11, texWidth, texHeight, mirorIn, Direction.DOWN);
-			this.quads[3] = new TexturedQuad(new PositionTextureVertex[]{modelrenderer$positiontexturevertex1, modelrenderer$positiontexturevertex2, modelrenderer$positiontexturevertex6, modelrenderer$positiontexturevertex5}, f6, f11, f7, f10, texWidth, texHeight, mirorIn, Direction.UP);
-			this.quads[1] = new TexturedQuad(new PositionTextureVertex[]{modelrenderer$positiontexturevertex7, modelrenderer$positiontexturevertex3, modelrenderer$positiontexturevertex6, modelrenderer$positiontexturevertex2}, f4, f11, f5, f12, texWidth, texHeight, mirorIn, Direction.WEST);
-			this.quads[4] = new TexturedQuad(new PositionTextureVertex[]{modelrenderer$positiontexturevertex, modelrenderer$positiontexturevertex7, modelrenderer$positiontexturevertex2, modelrenderer$positiontexturevertex1}, f5, f11, f6, f12, texWidth, texHeight, mirorIn, Direction.NORTH);
-			this.quads[0] = new TexturedQuad(new PositionTextureVertex[]{modelrenderer$positiontexturevertex4, modelrenderer$positiontexturevertex, modelrenderer$positiontexturevertex1, modelrenderer$positiontexturevertex5}, f6, f11, f8, f12, texWidth, texHeight, mirorIn, Direction.EAST);
-			this.quads[5] = new TexturedQuad(new PositionTextureVertex[]{modelrenderer$positiontexturevertex3, modelrenderer$positiontexturevertex4, modelrenderer$positiontexturevertex5, modelrenderer$positiontexturevertex6}, f8, f11, f9, f12, texWidth, texHeight, mirorIn, Direction.SOUTH);
+			this.quads[2] = new TexturedQuad(new PositionTextureVertex[]{vertex4, vertex3, vertex7, vertex0}, f5, f10, f6, f11, texWidth, texHeight, mirorIn, Direction.DOWN);
+			this.quads[3] = new TexturedQuad(new PositionTextureVertex[]{vertex1, vertex2, vertex6, vertex5}, f6, f11, f7, f10, texWidth, texHeight, mirorIn, Direction.UP);
+			this.quads[1] = new TexturedQuad(new PositionTextureVertex[]{vertex7, vertex3, vertex6, vertex2}, f4, f11, f5, f12, texWidth, texHeight, mirorIn, Direction.WEST);
+			this.quads[4] = new TexturedQuad(new PositionTextureVertex[]{vertex0, vertex7, vertex2, vertex1}, f5, f11, f6, f12, texWidth, texHeight, mirorIn, Direction.NORTH);
+			this.quads[0] = new TexturedQuad(new PositionTextureVertex[]{vertex4, vertex0, vertex1, vertex5}, f6, f11, f8, f12, texWidth, texHeight, mirorIn, Direction.EAST);
+			this.quads[5] = new TexturedQuad(new PositionTextureVertex[]{vertex3, vertex4, vertex5, vertex6}, f8, f11, f9, f12, texWidth, texHeight, mirorIn, Direction.SOUTH);
 		}
 	}
 
@@ -176,9 +188,11 @@ public class ConduitRenderer extends TileEntityRenderer<ConduitTE> {
 		super(rendererDispatcherIn);
 	}
 
-	private Vector3f add(IVertexBuilder buf, MatrixStack stack, float offset, int color, Collection<Direction> connections) {
+
+
+	private Vector3f add(IVertexBuilder buf, MatrixStack stack, float offset, int color, float time, Collection<ModelConduit.DirConType> connections) {
 		final float size = 0.125F;
-		final float off = (offset * size);
+		final float off = ((offset * 1.0F) * size);
 		final float min = off - (size / 2);
 
 		final int a = (color >> 24) & 255;
@@ -190,37 +204,82 @@ public class ConduitRenderer extends TileEntityRenderer<ConduitTE> {
 
 		ModelBox middle = new ModelBox(min, min, min, size, size, size);
 
-		ModelBox[] tubes = new ModelBox[6];
+		ModelBox[][] tubes = new ModelBox[6][];
 
-		for (Direction connection : connections) {
-			Vec3i vec = connection.getDirectionVec();
+		/*for (DirConType dirConType : connections) {
+			List<ModelBox> set = new ArrayList<>();
 
-			Vector3f p = new Vector3f(new Vec3d(vec));
+			Vector3f p = dirConType.dir.toVector3f();
 			p.apply(f -> {
 				if (f == 0) return min;
 				return f;
 			});
-			Vector3f s = new Vector3f(new Vec3d(vec));
+			Vector3f s = dirConType.dir.toVector3f();
 			s.apply(f -> {
 				if (f < 0) return 1F + min;
 				else if (f > 0) return -1F + min;
-				else if (f == 0) return size;
-				return f * -size;
+				else return size;
 			});
-			tubes[connection.getIndex()] = ModelBox.newBox(p, s);
-		}
+			set.add(newBox(p, s));
+			class PSet implements Float2FloatFunction {
+				final boolean flip;
+				PSet(boolean flip) { this.flip = flip; }
+				@Override
+				public float get(float f) {
+					if (f == 0) return min - 0.125F;
+					f *= -1; //Because all instances I need the opposite.
+					double d = Math.sin((time / 20) * Math.PI);
+					if (flip) d *= -1;
+					double x = (off - ((f * 1.5) * size)) * f;
+					double v = ((((d + 1) / 2) * (x + 1)) - 1);//Credit: Phlosion from Discord.
+					return (float) (v * f);
+				}
+			}
+			class SSet implements Float2FloatFunction {
+				@Override
+				public float get(float f) {
+					float l = 0.125F;
+					if (f < 0) return l;
+					else if (f > 0) return -l;
+					else return size + 0.25F;
+				}
+			}
+			ConnectionType type = dirConType.type;
+			if (type.extraRender) {
+				if (type.input) {
+					p = dirConType.dir.toVector3f();
+					p.apply(new PSet(false));
+					s = dirConType.dir.toVector3f();
+					s.apply(new SSet());
+					set.add(newBox(p, s));
+				}
+				if (type.output) {
+					p = dirConType.dir.toVector3f();
+					p.apply(new PSet(true));
+					s = dirConType.dir.toVector3f();
+					s.apply(new SSet());
+					set.add(newBox(p, s));
+				}
+			}
+
+			tubes[dirConType.dir.getIndex()] = set.toArray(new ModelBox[0]);
+		}*/
 
 		for (Direction direction : Direction.values()) {
-			ModelBox tube = tubes[direction.getIndex()];
-			if (tube != null) {
-				for (Direction dir2 : Direction.values()) {
-					if (direction != dir2.getOpposite()) {
-						TexturedQuad quad = tube.getSide(dir2);
-						for (PositionTextureVertex vertexPosition : quad.vertexPositions) {
-							Vector3f pos = vertexPosition.position;
-							buf.pos(matrix, pos.getX(), pos.getY(), pos.getZ()).color(r, g, b, a).endVertex();
+			ModelBox[] set = tubes[direction.getIndex()];
+			if (set != null) {
+				boolean skip = true;
+				for (ModelBox tube : set) {
+					for (Direction dir2 : Direction.values()) {
+						if (!skip || direction != dir2.getOpposite()) {
+							TexturedQuad quad = tube.getSide(dir2);
+							for (PositionTextureVertex vertexPosition : quad.vertexPositions) {
+								Vector3f pos = vertexPosition.position;
+								buf.pos(matrix, pos.getX(), pos.getY(), pos.getZ()).color(r, g, b, a).endVertex();
+							}
 						}
 					}
+					skip = false;
 				}
 			} else  {
 				TexturedQuad quad = middle.getSide(direction);
@@ -234,15 +293,76 @@ public class ConduitRenderer extends TileEntityRenderer<ConduitTE> {
 		return new Vector3f(off, off + (size * 3), off);
 	}
 
+	private <Cap> void update(MatrixStack stack, IRenderTypeBuffer typeBuf, int combinedLight, int combinedOverlay, Link<Cap> link) {
+		ModelConduit conduit;
+		if (CASHE) conduit = MAP.computeIfAbsent(link.getType(), type -> new ModelConduit(type, TIME));
+		else conduit = new ModelConduit(link.getType(), TIME);
+		int color = link.getType().color;
+
+		final int a = (color >> 0x18) & 0xff;
+		final int r = (color >> 0x10) & 0xff;
+		final int g = (color >> 0x08) & 0xff;
+		final int b = (color >> 0x00) & 0xff;
+
+		conduit.update(link);
+		IVertexBuilder buf = typeBuf.getBuffer(conduit.getRenderType(Objects.requireNonNull(link.getType().getRegistryName())));
+		conduit.render(stack, buf, combinedLight, combinedOverlay,
+				r / 255F,
+				g / 255F,
+				b / 255F,
+				a / 255F
+		);
+	}
+
+
+
 	@Override
 	public void render(
 			ConduitTE te, float partialTicks,
 			MatrixStack stack, IRenderTypeBuffer typeBuf,
 			int combinedLight, int combinedOverlay) {
 		stack.push();
-		IVertexBuilder buf = typeBuf.getBuffer(CONDUIT);
 		stack.translate(0.5, 0.5, 0.5);
 		stack.scale(0.5F, 0.5F, 0.5F);
+
+		te.getLinks().values().forEach(link -> update(stack, typeBuf, combinedLight, combinedOverlay, link));
+
+		if (ClientConfig.get().shouldShowLines()) {
+			IVertexBuilder buffer = typeBuf.getBuffer(OVERLAY_LINES);
+			Matrix4f matrix = stack.getLast().getMatrix();
+
+			for (int x = -1; x <= 1; x += 2)
+				for (int z = -1; z <= 1; z += 2)
+					for (int y = -1; y <= 1; y += 2)
+						buffer.pos(matrix, x, y, z).color(0, 255, 0, 255).endVertex();
+
+			for (int x = -1; x <= 1; x += 2)
+				for (int y = -1; y <= 1; y += 2)
+					for (int z = -1; z <= 1; z += 2)
+						buffer.pos(matrix, x, y, z).color(0, 0, 255, 255).endVertex();
+
+			for (int z = -1; z <= 1; z += 2)
+				for (int y = -1; y <= 1; y += 2)
+					for (int x = -1; x <= 1; x += 2)
+						buffer.pos(matrix, x, y, z).color(255, 0, 0, 255).endVertex();
+		}
+
+		stack.pop();
+	}
+
+	public void renderOld(
+			ConduitTE te, float partialTicks,
+			MatrixStack stack, IRenderTypeBuffer typeBuf,
+			int combinedLight, int combinedOverlay) {
+		final float time;
+		ClientWorld world = Minecraft.getInstance().world;
+		if (world != null) time = world.getGameTime() + partialTicks;
+		else time = 0;
+
+		stack.push();
+		IVertexBuilder buf = typeBuf.getBuffer(CONDUIT);
+		stack.translate(0.5, 0.5, 0.5);
+		//stack.scale(8, 8, 8);
 
 		Map<ConduitType<?>, Link<?>> links = te.getLinks();
 		//int size = links.size();
@@ -262,12 +382,21 @@ public class ConduitRenderer extends TileEntityRenderer<ConduitTE> {
 		final IVertexBuilder finalBuf = buf;
 		links.forEach((type, link) -> {
 			stack.push();
-			ids.add(new IdColor(link.getNetworkID().toString(), type.color,
-					add(finalBuf, stack, ETRegistry.getSortValue(type), type.color, link.getConnections().keySet())));
+			ids.add(new IdColor(link.getNetworkID().toString().substring(0, 3), type.color,
+					add(finalBuf, stack, ETRegistry.getSortValue(type), type.color, time,
+							link.getParts().entrySet().stream().map(entry -> new ModelConduit.DirConType(entry.getKey(),
+							entry.getValue().asNode().flatMap(Node::asIO).map(io -> {
+								if (io.isBuffer()) return ConnectionType.BUFFER;
+								if (io.isInput()) return io.isOutput() ? ConnectionType.INOUT : ConnectionType.INPUT;
+								if (io.isOutput()) return ConnectionType.OUTPUT;
+								return ConnectionType.DEFAULT;
+							}).orElse(ConnectionType.DEFAULT))
+					).collect(Collectors.toCollection(ArrayList::new)))));
 			//offset.updateAndGet(v -> v + 1);
 			stack.pop();
 		});
 
+		//ids.add(new IdColor(String.format("%f: %f", time, Math.sin(time)), -1, Vector3f.YP));
 		/*add(buf, stack, -1, 0xFFFF0000,
 				Arrays.stream(Direction.values())
 						.filter(dir -> dir.getAxis() == Direction.Axis.X)
@@ -350,7 +479,7 @@ public class ConduitRenderer extends TileEntityRenderer<ConduitTE> {
 				stack.rotate(Vector3f.YP.rotationDegrees(renderDispatcher.renderInfo.getYaw()));
 				stack.rotate(Vector3f.ZP.rotationDegrees(-22.5f));
 
-				String s = id.id.substring(0, 3);
+				String s = id.id;
 				//float x = (float) (-fontRenderer.getStringWidth(s) / 2);
 				fontRenderer.renderString(
 						s,

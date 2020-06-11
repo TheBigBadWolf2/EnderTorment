@@ -422,10 +422,9 @@ public class EnderFluxCollectorTE extends ETTileEntity implements ITickableTileE
 
 	@Override
 	protected List<Cap<?>> getCaps() {
-		return ImmutableList.of(
-				new Cap<>(CapabilityEnderFlux.ENDER_FLUX, () -> enderFluxStorage),
-				new Cap<>(CapabilityEnchantableBlock.ENCHANTABLE_BLOCK, () -> enchantable),
-				new Cap<>(CapabilityItemHandler.ITEM_HANDLER_CAPABILITY, () -> new CombinedInvWrapper(enderFluxStorage, enchantable)) //ToDo: Make a wrapper that can recalculate.
-		);
+		return CapList.New().addCapS(CapabilityEnderFlux.ENDER_FLUX, () -> enderFluxStorage)
+				.addCapS(CapabilityEnchantableBlock.ENCHANTABLE_BLOCK, () -> enchantable)
+				.addCapS(CapabilityItemHandler.ITEM_HANDLER_CAPABILITY, () -> new CombinedInvWrapper(enderFluxStorage, enchantable))//ToDo: Make a wrapper that can recalculate.
+				.build();
 	}
 }

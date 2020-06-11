@@ -1,5 +1,9 @@
 package white_blizz.ender_torment.common.conduit;
 
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Lists;
+import com.google.common.collect.Streams;
 import net.minecraft.util.Direction;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.world.dimension.DimensionType;
@@ -12,7 +16,10 @@ import org.apache.logging.log4j.Logger;
 
 import javax.annotation.Nullable;
 import java.util.*;
+import java.util.function.BiPredicate;
+import java.util.function.Function;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 public class Network<Cap> {
 	static final Logger LOGGER = LogManager.getLogger();
@@ -141,6 +148,7 @@ public class Network<Cap> {
 		}
 	}
 
+	@SuppressWarnings("UnstableApiUsage")
 	public static <Cap> void removeLink(Link<Cap> link, boolean dissolve) {
 		boolean isClient = link.isClient;
 		getNetworks(isClient).MAPPED_NETWORKS.remove(link);
@@ -148,11 +156,69 @@ public class Network<Cap> {
 		if (network == null) return;
 		network.remove(link);
 		if (dissolve) {
-			if (link.getLinks().size() <= 1) return;
+			Collection<Link<Cap>> links = link.getLinks().values();
+			if (links.size() <= 1) return;
+			BiPredicate<Link<Cap>, Link<Cap>> conPred = checkConnections(links);
+			if (Streams.zip(links.stream(), Stream.generate(links::stream),
+					(l, ls) -> ls.filter(v -> v != l).map(v -> conPred.test(l, v))
+			).flatMap(Function.identity())
+					.reduce(true, (a, b) -> a && b)) return;
 			network.invalidate();
 			getNetworks(isClient).NETWORKS.remove(network.id);
 			LOGGER.debug("Network of type \"{}\" and id \"{}\" destroyed!", network.type, network.id);
 		}
+	}
+
+	public static <Cap> boolean checkConnection(Link<Cap> a, Link<Cap> b) {
+		return checkConnections(a, b).test(a, b);
+	}
+
+	private static class Connections<Cap> implements BiPredicate<Link<Cap>, Link<Cap>> {
+		final Map<Link<Cap>, Collection<Link<Cap>>> map;
+
+		private Connections(Map<Link<Cap>, Collection<Link<Cap>>> map) {
+			this.map = map;
+		}
+
+		@Override
+		public boolean test(Link<Cap> a, Link<Cap> b) {
+			return a == b || (map.containsKey(a) && map.get(a).contains(b));
+		}
+	}
+
+	public static <Cap> BiPredicate<Link<Cap>, Link<Cap>> checkConnections(Link<Cap> link) {
+		return checkConnections(link.getLinks().values());
+	}
+
+	@SafeVarargs
+	public static <Cap> BiPredicate<Link<Cap>, Link<Cap>> checkConnections(Link<Cap>... links) {
+		if (links.length == 1) return (a, b) -> false;
+		return checkConnections(Lists.newArrayList(links));
+	}
+
+	/**
+	 * Only tests the ones supplied.
+	 * @param links The {@link white_blizz.ender_torment.common.conduit.Link}s to test.
+	 * @param <Cap> The type of {@link white_blizz.ender_torment.common.conduit.Link}
+	 * @return A function to test if two of the supplied Links are connected.
+	 */
+	public static <Cap> BiPredicate<Link<Cap>, Link<Cap>> checkConnections(Collection<Link<Cap>> links) {
+		if (links.size() == 1) return (a, b) -> false;
+
+		Map<Link<Cap>, List<Link<Cap>>> map = new HashMap<>();
+		for (Link<Cap> link : links) {
+			map.put(link,
+				map.values()
+						.stream()
+						.filter(list -> list.contains(link))
+						.findAny()
+						.orElseGet(() -> ImmutableList.copyOf(new Tracer<Cap>(link){
+							@Override protected boolean shouldCollect(Link<Cap> link) { return links.contains(link); }
+							@Override protected boolean hasCollectedAll(Collection<Link<Cap>> cLinks) { return cLinks.containsAll(links); }
+						}.get()))
+			);
+		}
+		return new Connections<>(ImmutableMap.copyOf(map));
 	}
 
 	private void merge(Network<Cap> other) {

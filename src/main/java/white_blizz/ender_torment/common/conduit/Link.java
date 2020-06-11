@@ -75,8 +75,13 @@ public abstract class Link<Cap> extends NetworkPart<Cap> implements INBTSerializ
 	}
 
 	private static <Cap> boolean tryForceUnlink(Link<Cap> a, Direction dir, Link<Cap> b) {
-		if (a.connections.get(dir).flatMap(Connection::getPart).map(o -> o != b).orElse(true)) return false;
-		if (b.connections.get(dir.getOpposite()).flatMap(Connection::getPart).map(o -> o != a).orElse(true)) throw new IllegalStateException("Link \"a\" was connected to Link \"b\", but Link \"b\" was not connected to Link \"a\"!");
+		boolean a_b = a.connections.get(dir).flatMap(Connection::getPart).map(o -> o == b).orElse(false);
+		boolean b_a = b.connections.get(dir.getOpposite()).flatMap(Connection::getPart).map(o -> o == a).orElse(false);
+		if (a_b != b_a) {
+			throw new IllegalStateException("Uneven Link between \"a\" and \"b\"!");
+		}
+		if (!a_b) return false;
+		//if (!b_a) throw new IllegalStateException("Link \"a\" was connected to Link \"b\", but Link \"b\" was not connected to Link \"a\"!");
 		a.unlink(dir);
 		b.unlink(dir.getOpposite());
 		return true;
@@ -229,7 +234,7 @@ public abstract class Link<Cap> extends NetworkPart<Cap> implements INBTSerializ
 					//link(this, link);
 					tryForceLink(this, direction, link);
 				}
-			} else if (Connection.canBeNode(dim, pos.offset(direction), type, direction))
+			} else if (canConnectTo(direction) && Connection.canBeNode(dim, pos.offset(direction), type, direction))
 				connections.compute(direction, this::updateNodeConnection);
 		}
 	}
@@ -322,11 +327,15 @@ public abstract class Link<Cap> extends NetworkPart<Cap> implements INBTSerializ
 	protected abstract CompoundNBT serializeExtraNBT(CompoundNBT tag);
 	protected abstract void deserializeExtraNBT(CompoundNBT tag);
 
-	public interface LinkFactory<L  extends Link<?>> {
+	public interface LinkFactory<L extends Link<?>> {
 		L make(DimensionType dim, BlockPos pos, ConduitType<?> type, boolean isClient);
 	}
 
+	private boolean removePending = false;
+	boolean isRemovePending() { return removePending; }
+
 	public void remove(boolean dissolve) {
+		removePending = true;
 		Network.removeLink(this, dissolve);
 		if (dissolve) Link.unlink(this);
 	}
@@ -350,6 +359,6 @@ public abstract class Link<Cap> extends NetworkPart<Cap> implements INBTSerializ
 
 	@Override
 	protected boolean validate() {
-		return this.equals(Network.getLink(dim, pos, type, isClient));
+		return !removePending && this.equals(Network.getLink(dim, pos, type, isClient));
 	}
 }
