@@ -90,11 +90,15 @@ public final class ETBlocks extends ETDeferredRegisterHandler {
 	public static final BlockItemObject<MiddleSnowBlock, ETBlockItem> SNOW_BLOCK = BLOCKS.reg("snow_block", () -> MiddleSnowBlock.withBlock(Blocks.SNOW_BLOCK, ICE).get(), ETBlockItem::new, ETBlocks::getDefault);
 	public static final BlockItemObject<StackingSnowBlock, ETBlockItem> SNOW = BLOCKS.reg("snow", StackingSnowBlock::new, ETBlockItem::new, ETBlocks::getDefault);
 
+	public static final BlockItemObject<WallSnowBlock, ETBlockItem> WALL_SNOW = BLOCKS.reg("wall_snow", WallSnowBlock::new, ETBlockItem::new, ETBlocks::getDefault);
+
 	public static final RegistryObject<TileEntityType<EnderFluxCollectorTE>> ENDER_FLUX_COLLECTOR_TYPE = TILE_ENTITIES.register("ender_flux_collector", EnderFluxCollectorTE::new, ENDER_FLUX_COLLECTOR);
 	public static final RegistryObject<TileEntityType<EnderFluxConverterTE>> ENDER_FLUX_CONVERTER_TYPE = TILE_ENTITIES.register("ender_flux_converter", EnderFluxConverterTE::new, ENDER_FLUX_CONVERTER);
 	public static final RegistryObject<TileEntityType<EnderFluxBatteryTE>> ENDER_FLUX_BATTERY_TYPE = TILE_ENTITIES.register("ender_flux_battery", EnderFluxBatteryTE::new, ENDER_FLUX_BATTERY);
 	public static final RegistryObject<TileEntityType<ConduitTE>> CONDUIT_TYPE = TILE_ENTITIES.register("conduit", ConduitTE::new, CONDUIT);
 	public static final RegistryObject<TileEntityType<CompactionTE>> COMPACTION_TYPE = TILE_ENTITIES.register("compaction", CompactionTE::new, COMPACTION);
+
+	public static final RegistryObject<TileEntityType<WallSnowTE>> WALL_SNOW_TYPE = TILE_ENTITIES.register("wall_snow", WallSnowTE::new, WALL_SNOW);
 
 	public ETBlocks(IEventBus bus) { super(bus, BLOCKS, TILE_ENTITIES); }
 

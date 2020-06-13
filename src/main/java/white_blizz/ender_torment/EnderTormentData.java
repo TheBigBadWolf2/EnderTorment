@@ -199,6 +199,8 @@ public final class EnderTormentData {
 			builtIn(ETBlocks.ICE);
 			builtIn(ETBlocks.PACKED_ICE);
 			builtIn(ETBlocks.BLUE_ICE);
+
+			builtIn(ETBlocks.WALL_SNOW);
 		}
 
 		private void builtIn(ETBlocks.BlockItemObject<? extends Block, ?> block) {
@@ -291,6 +293,15 @@ public final class EnderTormentData {
 				drop(ETBlocks.ICE.get(), Items.ICE);
 				drop(ETBlocks.PACKED_ICE.get(), Items.PACKED_ICE);
 				drop(ETBlocks.BLUE_ICE.get(), Items.BLUE_ICE);
+
+				wallSnow();
+			}
+
+			private void wallSnow() {
+				LootTable.Builder builder = LootTable.builder();
+
+
+				registerLootTable(ETBlocks.WALL_SNOW.get(), builder);
 			}
 
 			private void drop(Block block, IItemProvider item) {

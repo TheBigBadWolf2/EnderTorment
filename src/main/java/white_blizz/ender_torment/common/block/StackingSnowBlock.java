@@ -94,17 +94,17 @@ public class StackingSnowBlock extends ETBlock implements ISnowChainStart {
 					return false;
 				}
 			}
-			BlockPos down = pos;
+			/*BlockPos down = pos;
 			BlockState state1;
 			while ((state1 = worldIn.getBlockState(down = down.down())).getBlock() instanceof ISnowChain) {
 				if (state1.getBlock() instanceof ISnowChainEnd) return false;
-			}
-
-			return true;
+			}*/
+			return testNext(state, worldIn, pos);
 		} else {
 			return false;
 		}
 	}
+
 
 	@Override
 	public BlockState updatePostPlacement(BlockState stateIn, Direction facing, BlockState facingState, IWorld worldIn, BlockPos currentPos, BlockPos facingPos) {
@@ -128,12 +128,28 @@ public class StackingSnowBlock extends ETBlock implements ISnowChainStart {
 	}
 
 	@Override
+	public boolean testNext(BlockState state, IWorldReader worldIn, BlockPos pos) {
+		BlockPos down = pos.down();
+		BlockState next = worldIn.getBlockState(down);
+		Block block = next.getBlock();
+		if (block == this) {
+			return testNext(next, worldIn, down);
+		} else if (next(state) == next) {
+			if (block instanceof ISnowChainMiddle) {
+				return ((ISnowChainMiddle) block).testNext(next, worldIn, down);
+			} else return !(block instanceof ISnowChainEnd);
+		}
+		return true;
+	}
+
+	@Override
 	public boolean isSideInvisible(BlockState state, BlockState adjacentBlockState, Direction side) {
 		return adjacentBlockState.getBlock() instanceof ISnowChain;
 	}
 
 	@Override
 	public BlockState next(BlockState current) {
-		return ETBlocks.SNOW_BLOCK.get().getDefaultState();
+		if (current.get(LAYERS) == MAX) return ETBlocks.SNOW_BLOCK.get().getDefaultState();
+		return current;
 	}
 }

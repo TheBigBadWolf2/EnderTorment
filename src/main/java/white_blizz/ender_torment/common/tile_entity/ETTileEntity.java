@@ -33,9 +33,7 @@ public abstract class ETTileEntity extends TileEntity implements IETTileEntity {
 
 	private boolean isDirty = false;
 
-	protected boolean shouldAutoMark() {
-		return true;
-	}
+	protected boolean shouldAutoMark() { return true; }
 
 	@Override
 	public void markDirty() {

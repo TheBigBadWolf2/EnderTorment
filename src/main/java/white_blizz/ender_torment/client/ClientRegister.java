@@ -4,8 +4,10 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.GameRenderer;
 import net.minecraft.client.renderer.RenderType;
 import net.minecraft.client.renderer.RenderTypeLookup;
+import net.minecraft.client.resources.ClientResourcePackInfo;
 import net.minecraft.resources.IPackFinder;
 import net.minecraft.resources.ResourcePackInfo;
+import net.minecraft.resources.ResourcePackList;
 import net.minecraft.resources.data.PackMetadataSection;
 import net.minecraft.util.text.StringTextComponent;
 import net.minecraftforge.api.distmarker.Dist;
@@ -31,28 +33,32 @@ import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
 import java.util.Map;
 import java.util.function.Predicate;
+import java.util.function.Supplier;
+
 @ParametersAreNonnullByDefault
 @Mod.EventBusSubscriber(modid = Ref.MOD_ID, value = Dist.CLIENT, bus = Mod.EventBusSubscriber.Bus.MOD)
 public class ClientRegister {
-	public static final SnowModel.Loader SNOW_LOADER = new SnowModel.Loader();
 
 	@SubscribeEvent public static void setup(FMLClientSetupEvent event) {
 		ClientRegistry.bindTileEntityRenderer(ETBlocks.CONDUIT_TYPE.get(), ConduitRenderer::new);
 		if (ETBlocks.COMPACTION_TYPE != null)
 			ClientRegistry.bindTileEntityRenderer(ETBlocks.COMPACTION_TYPE.get(), CompactionRenderer::new);
 		DeferredWorkQueue.runLater(ClientRegister::swap);
-		ModelLoaderRegistry.registerLoader(Ref.MOD.rl.loc("snow"), SNOW_LOADER);
+		ModelLoaderRegistry.registerLoader(Ref.MOD.rl.loc("snow"), new SnowModel.Loader());
+		ModelLoaderRegistry.registerLoader(Ref.MOD.rl.loc("wall_snow"), new WallSnowModel.Loader());
 
 		Predicate<RenderType> test = type -> type == RenderType.getTranslucent();
 		RenderTypeLookup.setRenderLayer(ETBlocks.SNOW_BLOCK.get(), test);
 		RenderTypeLookup.setRenderLayer(ETBlocks.ICE.get(), test);
 		RenderTypeLookup.setRenderLayer(ETBlocks.PACKED_ICE.get(), test);
 		RenderTypeLookup.setRenderLayer(ETBlocks.BLUE_ICE.get(), test);
+
+		addPackFinder(event.getMinecraftSupplier());
 	}
 
-	public static void addPackFinder() {
-		Minecraft.getInstance().getResourcePackList()
-				.addPackFinder(new IPackFinder() {
+	public static void addPackFinder(Supplier<Minecraft> mc) {
+		ResourcePackList<ClientResourcePackInfo> list = mc.get().getResourcePackList();
+		list.addPackFinder(new IPackFinder() {
 					@Override
 					public <T extends ResourcePackInfo> void addPackInfosToMap(
 							Map<String, T> nameToPackMap,
@@ -67,6 +73,7 @@ public class ClientRegister {
 						);
 					}
 				});
+		if (!list.getAllPacks().isEmpty()) list.reloadPacksFromFinders();
 	}
 
 	private static void swap() {

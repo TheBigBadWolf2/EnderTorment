@@ -313,22 +313,30 @@ public class SnowModel implements IDynamicBakedModel {
 				ImmutableList.Builder<BakedQuad> builder = ImmutableList.builder();
 
 				builder.add(buildQuad(top, topSprite, ceiling, false, topX, topY, topZ, topU, topV));
-				if (!fullVolume) builder.add(buildQuad(top, topSprite, !ceiling, true, topX, topY, topZ, topU, topV));
+				/*if (!fullVolume) */builder.add(buildQuad(top, topSprite, !ceiling, true, topX, topY, topZ, topU, topV));
 
 				faceQuads.put(top, builder.build());
 			}
 
 			// bottom
 			Direction bottom = top.getOpposite();
-			faceQuads.put(bottom, ImmutableList.of(
-					buildQuad(bottom, ceiling ? topTexture : bottomTexture, ceiling, false,
-							i -> Z[i],
-							i -> ceiling ? 1 : 0,
-							i -> X[i],
-							i -> Z[i] * 16,
-							i -> X[i] * 16
-					)
-			));
+
+			TextureAtlasSprite bottomSprite = ceiling ? topTexture : bottomTexture;
+
+			VertexParameter bottomX = i -> Z[i];
+			VertexParameter bottomY = i -> ceiling ? 1 : 0;
+			VertexParameter bottomZ = i -> X[i];
+			VertexParameter bottomU = i -> Z[i] * 16;
+			VertexParameter bottomV = i -> X[i] * 16;
+
+			{
+				ImmutableList.Builder<BakedQuad> builder = ImmutableList.builder();
+
+				builder.add(buildQuad(bottom, bottomSprite, ceiling, false, bottomX, bottomY, bottomZ, bottomU, bottomV));
+				builder.add(buildQuad(bottom, bottomSprite, !ceiling, true, bottomX, bottomY, bottomZ, bottomU, bottomV));
+
+				faceQuads.put(bottom, builder.build());
+			}
 
 			// sides
 			for (int i = 0; i < 4; i++) {
@@ -338,24 +346,12 @@ public class SnowModel implements IDynamicBakedModel {
 				VertexParameter sideX = j -> X[(si + X[j]) % 4];
 				VertexParameter sideY = j -> Z[j] == 0 ? (ceiling ? 1 : 0) : y[(si + X[j]) % 4];
 				VertexParameter sideZ = j -> Z[(si + X[j]) % 4];
-				VertexParameter sideU = j -> X[j] * 8;
-				VertexParameter sideV = j -> (ceiling ? sideY.get(j) : 1 - sideY.get(j)) * 8;
+				VertexParameter sideU = j -> X[j] * 16;
+				VertexParameter sideV = j -> (ceiling ? sideY.get(j) : 1 - sideY.get(j)) * 16;
 
 				ImmutableList.Builder<BakedQuad> builder = ImmutableList.builder();
-
-				if (sideTexture != null) {
-					builder.add(buildQuad(side, sideTexture, ceiling, true, sideX, sideY, sideZ, sideU, sideV));
-					builder.add(buildQuad(side, sideTexture, !ceiling, false, sideX, sideY, sideZ, sideU, sideV));
-				}/* else {
-					VertexParameter a = j -> 1 - sideY.get(j);
-					builder.add(buildQuad(side, topTexture, ceiling, true, sideX, sideY, sideZ, sideU, sideV, a));
-					builder.add(buildQuad(side, topTexture, !ceiling, false, sideX, sideY, sideZ, sideU, sideV, a));
-
-					a = j -> sideY.get(j);
-					a = j -> 0.5F;
-					builder.add(buildQuad(side, bottomTexture, ceiling, true, sideX, sideY, sideZ, sideU, sideV));
-					builder.add(buildQuad(side, bottomTexture, !ceiling, false, sideX, sideY, sideZ, sideU, sideV, a));
-				}*/
+				builder.add(buildQuad(side, sideTexture, ceiling, true, sideX, sideY, sideZ, sideU, sideV));
+				builder.add(buildQuad(side, sideTexture, !ceiling, false, sideX, sideY, sideZ, sideU, sideV));
 				faceQuads.put(side, builder.build());
 			}
 		} else {
@@ -573,12 +569,16 @@ public class SnowModel implements IDynamicBakedModel {
 
 		private static int[] combine(int[] a, int[] b) {
 			int[] c = new int[4];
-			for (int i = 0; i < 4; i++) c[i] = a[i] + b[i];
+			for (int i = 0; i < 4; i++) c[i] = clamp(a[i] + b[i]);
 			return c;
 		}
 
+		private static int clamp(int i) {
+			return MathHelper.clamp(i, 0, 255);
+		}
+
 		private static int clamp(double d) {
-			return MathHelper.clamp(MathHelper.floor(d), 0, 255);
+			return clamp(MathHelper.floor(d));
 		}
 
 		private static int recombine(int[] array) {
@@ -658,18 +658,21 @@ public class SnowModel implements IDynamicBakedModel {
 							for (int y = 0; y <= yMax; y++) {
 								double b = (double)y / (double)yMax;
 								double a = 1D - b;
-								IntUnaryOperator aOps[] = {
-										c -> 0,
-										c -> clamp(c * a),
-										c -> clamp(c * a),
+								//IntUnaryOperator _0 = c -> 0;
+								IntUnaryOperator aOp = c -> clamp(c * a),
+										bOp = c1 -> clamp(c1 * b);
+								/*IntUnaryOperator aOps[] = {
+										_0,
+										_a,
+										_a,
 								}, bOps[] = {
-										c -> clamp(c * b),
-										c -> 0,
-										c -> clamp(c * b),
-								}, index = i -> Math.min(i/3, 2);
+										_b,
+										_0,
+										_b,
+								}, index = i -> i < 5 ? 0 : i > 9 ? 2 : 1;*/
 								for (int x = 0; x <= xMax; x++) {
-									int i = index.applyAsInt(x);
-									IntUnaryOperator aOp = aOps[i], bOp = bOps[i];
+									//int i = index.applyAsInt(x);
+									//IntUnaryOperator aOp = aOps[i], bOp = bOps[i];
 									sideImage.setPixelRGBA(x, y, recombine(combine(
 										trans(split(topImage.getPixelRGBA(x, y)), aOp),
 										trans(split(bottomImage.getPixelRGBA(x, y)), bOp)

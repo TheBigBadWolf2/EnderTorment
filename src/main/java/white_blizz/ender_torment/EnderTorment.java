@@ -97,7 +97,7 @@ public final class EnderTorment {
 		SIDED_CONFIG = DistExecutor.safeRunForDist(() -> ClientConfig::new, () -> ServerConfig::new);
 		COMMON_CONFIG = new CommonConfig();
 
-		DistExecutor.safeRunWhenOn(Dist.CLIENT, () -> ClientRegister::addPackFinder);
+		//DistExecutor.safeRunWhenOn(Dist.CLIENT, () -> ClientRegister::addPackFinder);
 	}
 
 
